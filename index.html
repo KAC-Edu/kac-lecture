@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- @build 20260610-132159 · KAC Lecture (Student/교육생) JDS260610(V1) -->
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
@@ -38,6 +39,14 @@ html,body{height:100%;overflow:hidden;
 .brand{display:flex;flex-direction:column;line-height:1.25;flex-shrink:0;margin-right:4px;}
 .brand-t{font-size:12px;font-weight:700;}
 .brand-s{font-size:9px;color:var(--dim);letter-spacing:.8px;text-transform:uppercase;}
+.app-ver{
+  font-size:9px;font-weight:700;color:var(--gold);letter-spacing:.4px;
+  background:var(--panel2);border:1px solid var(--wine);
+  padding:2px 7px;border-radius:8px;
+  vertical-align:middle;margin-left:5px;white-space:nowrap;
+  transition:background .15s,color .15s;
+}
+.app-ver:hover{background:var(--wine);color:#fff;}
 
 /* topbar buttons */
 .btn{
@@ -462,7 +471,7 @@ html,body{height:100%;overflow:hidden;
 <div class="topbar">
   <div class="logo">KAC</div>
   <div class="brand">
-    <div class="brand-t">KAC Lecture</div>
+    <div class="brand-t">KAC Lecture <span class="app-ver" id="appVerTop"></span></div>
     <div class="brand-s">Korea Airports Corporation</div>
   </div>
 
@@ -589,7 +598,7 @@ html,body{height:100%;overflow:hidden;
           </select>
           <button class="qa-mic" id="btnVoiceQ" type="button">🎙 Speak Question</button>
         </div>
-        <div class="qa-voice-status" id="voiceStatus">Type a question, or tap the microphone and speak in the selected language.</div>
+        <div class="qa-voice-status" id="voiceStatus">Tap 🎙 and speak — tap again to send your question instantly. Or just type it below.</div>
         <textarea id="qaText" class="qa-ta"
           placeholder="Type or speak your question (max 500 chars)…"
           maxlength="500"></textarea>
@@ -620,12 +629,13 @@ html,body{height:100%;overflow:hidden;
     <a class="modal-mail" href="mailto:jds0616@airport.co.kr">
       ✉️ &nbsp;jds0616@airport.co.kr
     </a>
+    <div class="modal-built" id="appVerModal">Version —</div>
     <div class="modal-built">Built with Firebase · PDF.js · Open-Meteo</div>
   </div>
 </div>
 
 <!-- Developer credit (bottom-right) -->
-<div class="dev-credit" id="devCredit">Dev: Dooseok Jang</div>
+<div class="dev-credit" id="devCredit"><span id="appVerCredit"></span>Dev: Dooseok Jang</div>
 
 <div class="toast" id="toast"></div>
 <input type="file" id="fileInput" accept="application/pdf" style="display:none;">
@@ -645,6 +655,17 @@ const FC={
 };
 const SESSION='live';
 const $=id=>document.getElementById(id);
+
+// ── APP VERSION (강사 플랫폼과 동일 형식: JDS{YYMMDD}(V{n})) ──────────
+const APP_VERSION='JDS260610(V1)';
+const APP_BUILD='2026-06-10';
+(function(){
+  const top=$('appVerTop');    if(top){ top.textContent=APP_VERSION; top.title='Click for contact info';
+                                        top.style.cursor='pointer';
+                                        top.onclick=()=>$('devModal').classList.add('on'); }
+  const cr =$('appVerCredit'); if(cr)  cr.textContent=APP_VERSION+' · ';
+  const md =$('appVerModal');  if(md)  md.textContent=`Version: ${APP_VERSION}`;
+})();
 
 // unique client id
 function cid(){
@@ -901,38 +922,73 @@ qaText.addEventListener('keydown',e=>{
 $('btnSend').onclick=sendQ;
 
 let voiceRec=null, voiceOn=false;
+let _finalTranscript='', _userStop=false, _fatal=false;
+
 function setVoiceUI(on,msg){
   voiceOn=on;
   const b=$('btnVoiceQ'), s=$('voiceStatus');
   if(!b||!s)return;
   b.classList.toggle('on',on);
-  b.textContent=on?'⏹ Stop':'🎙 Speak Question';
+  b.textContent=on?'⏹ Tap to Send':'🎙 Speak Question';
   s.style.color=on?'var(--gold)':'var(--dim)';
-  s.textContent=msg || (on?`Listening in ${qaLangLabel()}…`:'Type a question, or tap the microphone and speak in the selected language.');
+  s.textContent=msg || (on
+    ? `Listening in ${qaLangLabel()}… speak, then tap ⏹ to send to the lecturer.`
+    : 'Tap the mic and speak — tap again to send instantly. Or type your question.');
 }
+
 function startVoiceQ(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR){toast('Voice input is not supported in this browser. Use Chrome.',3500);return;}
-  if(voiceOn){try{voiceRec&&voiceRec.stop();}catch(e){} setVoiceUI(false); return;}
+
+  // ── 2nd tap → stop listening AND send the question immediately ──
+  if(voiceOn){
+    _userStop=true;
+    const s=$('voiceStatus');
+    if(s){s.style.color='var(--gold)';s.textContent='Sending your question…';}
+    try{voiceRec&&voiceRec.stop();}catch(e){}
+    return;
+  }
+
+  // ── 1st tap → start a fresh listening session ──
+  _finalTranscript=''; _userStop=false; _fatal=false;
   voiceRec=new SR();
   voiceRec.lang=qaLang;
   voiceRec.interimResults=true;
-  voiceRec.continuous=false;
+  voiceRec.continuous=true;     // keep listening until the user taps ⏹
   voiceRec.maxAlternatives=1;
-  setVoiceUI(true,`Listening in ${qaLangLabel()}… Please speak your question.`);
+  setVoiceUI(true);
+
   voiceRec.onresult=e=>{
-    let interim='', finalTxt='';
+    let interim='';
     for(let i=e.resultIndex;i<e.results.length;i++){
-      const t=e.results[i][0].transcript.trim();
-      if(e.results[i].isFinal) finalTxt+=t+' '; else interim+=t;
+      const t=e.results[i][0].transcript;
+      if(e.results[i].isFinal) _finalTranscript+=t+' '; else interim+=t;
     }
-    const txt=(finalTxt||interim).trim();
+    const txt=(_finalTranscript+interim).trim();
     if(txt){qaText.value=txt.slice(0,500); lastInputType='voice'; updateSendState();}
   };
+
   voiceRec.onerror=e=>{
-    setVoiceUI(false, e.error==='not-allowed'?'Microphone permission is required.':'Voice recognition error. Please try again.');
+    if(e.error==='not-allowed'||e.error==='service-not-allowed'){
+      _fatal=true; _userStop=false;
+      setVoiceUI(false,'Microphone permission is required.');
+    }
+    // 'no-speech' / 'aborted' / 'network' → handled by onend (keep-alive or finalize)
   };
-  voiceRec.onend=()=>setVoiceUI(false, qaText.value.trim()?'Voice captured. Tap Send.':'No voice captured. Please try again.');
+
+  voiceRec.onend=()=>{
+    if(_userStop){                  // user tapped ⏹ → finalize + auto-send
+      _userStop=false;
+      setVoiceUI(false);
+      if(qaText.value.trim()){ sendQ(); }
+      else { toast('No speech captured. Please try again.',2500); }
+    } else if(voiceOn && !_fatal){   // engine auto-stopped on silence → keep listening
+      try{voiceRec.start();}catch(e){ setVoiceUI(false,'Voice session ended. Tap to retry.'); }
+    } else {
+      setVoiceUI(false);
+    }
+  };
+
   try{voiceRec.start();}catch(e){setVoiceUI(false,'Could not start microphone.');}
 }
 $('btnVoiceQ').onclick=startVoiceQ;
