@@ -469,6 +469,35 @@ html,body{height:100%;overflow:hidden;
   .sync-banner-btns{width:100%;display:flex;gap:8px;}
   .sync-banner-yes,.sync-banner-no{flex:1;text-align:center;}
 }
+
+/* ═══ 소형 모바일 (≤520px) — 정돈된 2열 버튼·읽기 좋은 안내 ═══ */
+@media(max-width:520px){
+  .topbar{padding:8px 10px 9px;gap:6px;}
+  .logo{width:32px;height:32px;font-size:11px;}
+  /* 버튼: 균등 2열 그리드처럼 정렬 — 들쭉날쭉 줄바꿈 제거 */
+  .topbar .btn{flex:1 1 calc(50% - 6px);justify-content:center;padding:10px 8px;font-size:13px;border-radius:8px;}
+  .topbar-right{flex-basis:100%;justify-content:space-between;margin-left:0;margin-top:2px;}
+  .clock{font-size:13px;}
+  /* 안내 카드: 여백·글자 최적화 */
+  .pdf-empty{padding:0 14px;}
+  .pdf-empty-icon{font-size:42px;}
+  .pdf-empty-title{font-size:15px;}
+  .pdf-memo{padding:14px 14px;font-size:12px;line-height:1.75;max-width:100%;}
+  .pdf-memo-row{gap:10px;}
+  .pdf-memo-icon{font-size:16px;}
+  .key{font-size:10.5px;padding:2px 6px;}
+  /* 모달·자막 */
+  .modal{padding:24px 18px;width:94%;}
+  .sub-area{height:120px;}
+}
+/* 터치 기기: 마우스 안내 대신 터치 안내 표시 */
+@media(pointer:coarse){
+  .nav-mouse{display:none;}
+  .nav-touch{display:inline;}
+}
+@media(pointer:fine){
+  .nav-touch{display:none;}
+}
 </style>
 </head>
 <body>
@@ -550,9 +579,15 @@ html,body{height:100%;overflow:hidden;
           <div class="pdf-memo-row">
             <span class="pdf-memo-icon">🖱️</span>
             <div><b>Page Navigation</b><br>
-              <span class="key">Left-click</span> next &nbsp;
-              <span class="key">Right-click</span> prev &nbsp;
-              <span class="key">← →</span> arrow keys
+              <span class="nav-mouse">
+                <span class="key">Left-click</span> next &nbsp;
+                <span class="key">Right-click</span> prev &nbsp;
+                <span class="key">← →</span> arrow keys
+              </span>
+              <span class="nav-touch">
+                <span class="key">👆 Swipe left</span> next &nbsp;
+                <span class="key">Swipe right 👆</span> prev
+              </span>
             </div>
           </div>
           <div class="pdf-memo-divider"></div>
@@ -1084,6 +1119,7 @@ function goPage(d){
 // Left-click = next, Right-click = prev (both blocked when sync ON)
 $('pdfWrap').addEventListener('click',e=>{
   if(!pdfDoc||syncOn||e.target.closest('button,a'))return;
+  if(Date.now()-_swipedAt<500)return;  // 스와이프 직후 고스트 탭 무시
   goPage(1);
 });
 $('pdfWrap').addEventListener('contextmenu',e=>{
@@ -1094,6 +1130,24 @@ $('pdfWrap').addEventListener('contextmenu',e=>{
 $('pdfWrap').addEventListener('auxclick',e=>{
   if(e.button===1&&pdfDoc&&!syncOn){e.preventDefault();goPage(-1);}
 });
+
+// 터치 스와이프: 왼쪽으로 밀면 다음, 오른쪽으로 밀면 이전 (탭은 기존 click=다음 유지)
+let _swX=null,_swY=null;
+$('pdfWrap').addEventListener('touchstart',e=>{
+  if(e.touches.length!==1)return;
+  _swX=e.touches[0].clientX;_swY=e.touches[0].clientY;
+},{passive:true});
+$('pdfWrap').addEventListener('touchend',e=>{
+  if(_swX===null||!pdfDoc||syncOn)return;
+  const dx=e.changedTouches[0].clientX-_swX;
+  const dy=e.changedTouches[0].clientY-_swY;
+  _swX=_swY=null;
+  if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.5){
+    goPage(dx<0?1:-1);
+    _swipedAt=Date.now();
+  }
+},{passive:true});
+let _swipedAt=0;
 
 // Keyboard
 document.addEventListener('keydown',e=>{
