@@ -19,6 +19,8 @@ html,body{height:100%;overflow:hidden;
   font-family:'Helvetica Neue','Segoe UI',sans-serif;
   background:var(--bg);color:var(--text);
   user-select:none;-webkit-user-select:none;}
+/* 상단바 높이가 줄바꿈으로 달라져도 본문이 화면 밖으로 밀리지 않도록 */
+body{display:flex;flex-direction:column;}
 
 /* ═══ TOPBAR ═══════════════════════════════════════════════════ */
 .topbar{
@@ -155,7 +157,7 @@ html,body{height:100%;overflow:hidden;
 
 /* ═══ STAGE ══════════════════════════════════════════════════════ */
 .stage{
-  height:calc(100vh - 58px);
+  flex:1;min-height:0;
   display:flex;flex-direction:column;
   position:relative;overflow:hidden;
 }
@@ -294,8 +296,8 @@ html,body{height:100%;overflow:hidden;
 }
 #viewQA.on{display:flex;}
 .qa-bar{
-  height:48px;display:flex;align-items:center;justify-content:space-between;
-  padding:0 16px;
+  height:58px;display:flex;align-items:center;gap:14px;
+  padding:0 14px;
   background:linear-gradient(180deg,#1c2130,#111520);
   border-bottom:1px solid var(--line);flex-shrink:0;
 }
@@ -303,14 +305,45 @@ html,body{height:100%;overflow:hidden;
   font-size:12px;font-weight:700;text-transform:uppercase;
   letter-spacing:1px;color:var(--gold);
   display:flex;align-items:center;gap:8px;
+  min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
+
+/* ── 뒤로가기 버튼 — 왼쪽 배치 + 골드 채움으로 즉시 눈에 띄게 ── */
 .qa-close{
-  background:var(--panel2);border:1.5px solid var(--line);color:var(--text);
-  padding:6px 16px;font-size:12px;font-weight:700;border-radius:6px;
-  cursor:pointer;display:inline-flex;align-items:center;gap:7px;
-  transition:all .14s;letter-spacing:.3px;
+  background:var(--gold);border:none;color:#000;
+  padding:11px 18px 11px 14px;font-size:13.5px;font-weight:800;
+  border-radius:9px;cursor:pointer;
+  display:inline-flex;align-items:center;gap:8px;
+  letter-spacing:.2px;white-space:nowrap;flex-shrink:0;
+  box-shadow:0 2px 12px rgba(201,169,110,.30);
+  transition:background .14s,box-shadow .14s,transform .08s;
 }
-.qa-close:hover{background:var(--wine);border-color:var(--wine);color:#fff;}
+.qa-close:hover{background:#e0b85a;box-shadow:0 3px 16px rgba(201,169,110,.45);}
+.qa-close:active{transform:scale(.97);}
+.qa-close-arrow{font-size:18px;line-height:1;font-weight:900;margin-top:-1px;}
+.qa-close-short{display:none;}
+/* 처음 열렸을 때 3번만 부드럽게 반짝여 위치를 알려줌 */
+@keyframes backPulse{
+  0%,100%{box-shadow:0 2px 12px rgba(201,169,110,.30);}
+  50%{box-shadow:0 0 0 7px rgba(201,169,110,.22),0 2px 12px rgba(201,169,110,.30);}
+}
+.qa-close.hint{animation:backPulse 1.1s ease-in-out 3;}
+
+/* ── 하단 고정 뒤로가기 — 모바일/태블릿에서 엄지 위치에 크게 ── */
+.qa-back-bottom{
+  display:none;
+  position:fixed;left:0;right:0;bottom:0;z-index:30;
+  padding:12px 14px calc(12px + env(safe-area-inset-bottom,0px));
+  background:linear-gradient(180deg,rgba(14,16,20,0),rgba(14,16,20,.97) 40%);
+  pointer-events:none;
+}
+.qa-back-bottom button{
+  width:100%;background:var(--gold);border:none;color:#000;
+  padding:15px;font-size:15px;font-weight:800;border-radius:11px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;
+  box-shadow:0 4px 18px rgba(0,0,0,.5);pointer-events:auto;letter-spacing:.2px;
+}
+.qa-back-bottom button:active{transform:scale(.985);}
 .qa-stage{
   flex:1;display:flex;flex-direction:column;padding:14px;overflow:hidden;
   user-select:text;-webkit-user-select:text;
@@ -454,6 +487,13 @@ html,body{height:100%;overflow:hidden;
   .brand-s{display:none;}
 }
 @media(max-width:700px){
+  /* 뒤로가기: 상단은 '← Back'으로 줄이고, 하단에 큰 버튼을 띄움 */
+  .qa-close-full{display:none;}
+  .qa-close-short{display:inline;}
+  .qa-close{padding:11px 16px;}
+  .qa-bar{height:54px;}
+  .qa-back-bottom{display:block;}
+  .qa-stage{padding-bottom:84px;}
   /* Keep core buttons visible; collapse secondary ones */
   .topbar{height:auto;flex-wrap:wrap;padding:7px 10px;gap:5px;}
   .topbar-spacer{display:none;}
@@ -624,19 +664,30 @@ html,body{height:100%;overflow:hidden;
   <!-- Materials overlay -->
   <div id="viewMat">
     <div class="qa-bar">
+      <button class="qa-close" id="btnMatClose" title="Return to the lecture screen">
+        <span class="qa-close-arrow">←</span>
+        <span class="qa-close-full">Back to Lecture</span>
+        <span class="qa-close-short">Back</span>
+      </button>
       <div class="qa-bar-title">📚 Materials — Download</div>
-      <button class="qa-close" id="btnMatClose">✕ &nbsp;Back to Lecture</button>
     </div>
     <div class="qa-stage">
       <div id="matList"></div>
+    </div>
+    <div class="qa-back-bottom">
+      <button id="btnMatClose2">← &nbsp;Back to Lecture</button>
     </div>
   </div>
 
   <!-- Q&A overlay -->
   <div id="viewQA">
     <div class="qa-bar">
+      <button class="qa-close" id="btnQAClose" title="Return to the lecture screen (Esc)">
+        <span class="qa-close-arrow">←</span>
+        <span class="qa-close-full">Back to Lecture</span>
+        <span class="qa-close-short">Back</span>
+      </button>
       <div class="qa-bar-title">💬 Q&amp;A — Ask a Question</div>
-      <button class="qa-close" id="btnQAClose">✕ &nbsp;Back to Lecture</button>
     </div>
     <div class="qa-stage">
       <div class="qa-in">
@@ -660,6 +711,9 @@ html,body{height:100%;overflow:hidden;
         <h3>📋 My Questions</h3>
         <div id="myQs"><div class="qa-empty">No questions yet.</div></div>
       </div>
+    </div>
+    <div class="qa-back-bottom">
+      <button id="btnQAClose2">← &nbsp;Back to Lecture</button>
     </div>
   </div>
 </div>
@@ -931,12 +985,23 @@ window.addEventListener('resize',()=>{
 });
 
 // ── Q&A ────────────────────────────────────────────────────────────
+// 뒤로가기 버튼을 열 때마다 잠깐 반짝여 위치를 알려줌
+function hintBack(btn){
+  if(!btn)return;
+  btn.classList.remove('hint');
+  void btn.offsetWidth;          // 애니메이션 재시작
+  btn.classList.add('hint');
+  setTimeout(()=>btn.classList.remove('hint'),3600);
+}
+
 function openQA(){$('viewQA').classList.add('on');$('btnQA').classList.add('on');
+  hintBack($('btnQAClose'));
   setTimeout(()=>$('qaText').focus(),80);}
 function closeQA(){$('viewQA').classList.remove('on');$('btnQA').classList.remove('on');}
 
 $('btnQA').onclick=()=>$('viewQA').classList.contains('on')?closeQA():openQA();
 $('btnQAClose').onclick=closeQA;
+$('btnQAClose2') && ($('btnQAClose2').onclick=closeQA);
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'&&$('viewQA').classList.contains('on')){e.preventDefault();closeQA();}
 });
@@ -988,8 +1053,16 @@ function renderMaterials(){
     c.appendChild(row);
   });
 }
-$('btnMaterials') && ($('btnMaterials').onclick=()=>{ renderMaterials(); $('viewMat').classList.add('on'); });
-$('btnMatClose') && ($('btnMatClose').onclick=()=>$('viewMat').classList.remove('on'));
+function closeMat(){ $('viewMat').classList.remove('on'); }
+$('btnMaterials') && ($('btnMaterials').onclick=()=>{
+  renderMaterials(); $('viewMat').classList.add('on'); hintBack($('btnMatClose'));
+});
+$('btnMatClose')  && ($('btnMatClose').onclick=closeMat);
+$('btnMatClose2') && ($('btnMatClose2').onclick=closeMat);
+// Materials 화면에서도 Esc 로 닫기
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&$('viewMat').classList.contains('on')){e.preventDefault();closeMat();}
+});
 let qaLang = 'en';
 document.querySelectorAll('.qa-lang').forEach(b=>{
   b.onclick=()=>{
