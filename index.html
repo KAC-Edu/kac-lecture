@@ -288,6 +288,21 @@ body{display:flex;flex-direction:column;}
 .mat-meta{font-size:11px;color:var(--dim);}
 .mat-dl{background:var(--wine);color:#fff;border:none;border-radius:8px;
   padding:9px 16px;font-size:13px;font-weight:700;white-space:nowrap;text-decoration:none;}
+/* 다운로드 버튼 묶음 — 원본 PDF + 스페인어 자막판 */
+.mat-dls{display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;}
+.mat-dl.es{background:var(--gold);color:#1a1a1a;}
+@media(max-width:520px){
+  /* 좁은 화면 : 제목 한 줄, 다운로드 버튼은 그 아래 전체폭 */
+  .mat-item{align-items:flex-start;flex-wrap:wrap;}
+  .mat-info{flex:1 1 100%;}
+  .mat-dls{width:100%;flex:1 1 100%;justify-content:stretch;margin-top:10px;flex-wrap:nowrap;}
+  .mat-dls .mat-dl{flex:1;text-align:center;padding:11px 8px;}
+}
+/* 자료 목록 — 자체 스크롤 영역 (항목이 많아도 아래까지 내려감) */
+#matList{
+  flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;padding-right:2px;
+}
 .mat-empty{text-align:center;padding:40px 14px;color:var(--dim);font-size:13px;}
 #viewQA{
   position:absolute;top:0;left:0;right:0;bottom:0;
@@ -782,7 +797,13 @@ catch(e){console.error('Firebase:',e);}
 
 /* 📚 자료 목록 — 강사 플랫폼에서 등록하면 Firebase로 실시간 수신 (편집 불필요) */
 let MATERIALS = [];
+// 강사가 [스페인어 자막판 전체 표시]를 끄면 두 번째 다운로드가 전부 숨겨진다
+let ES_ENABLED = true;
 if(db){
+  db.ref('matCfg/'+SESSION+'/esEnabled').on('value', snap=>{
+    ES_ENABLED = snap.val() !== false;      // 미설정이면 기본 ON
+    if($('viewMat') && $('viewMat').classList.contains('on')) renderMaterials();
+  });
   db.ref('materials/'+SESSION).on('value', snap=>{
     const v = snap.val() || {};
     MATERIALS = Object.values(v).sort((a,b)=>(a.ts||0)-(b.ts||0));
@@ -1045,11 +1066,26 @@ function renderMaterials(){
         <span class="mat-title">${(m.title||'Untitled').replace(/</g,'&lt;')}</span>
         ${m.size?`<span class="mat-meta">${m.size}</span>`:''}
       </div>`;
+    const dls=document.createElement('div');
+    dls.className='mat-dls';
+
     const a=document.createElement('a');
     a.className='mat-dl'; a.href=m.url||'#';
     a.setAttribute('download',''); a.target='_blank'; a.rel='noopener';
     a.textContent='⬇ Download';
-    row.appendChild(a);
+    dls.appendChild(a);
+
+    // 스페인어 자막판 — 강사가 켜둔 경우에만 노출
+    if(ES_ENABLED && m.esOn && m.urlEs){
+      const b=document.createElement('a');
+      b.className='mat-dl es'; b.href=m.urlEs;
+      b.setAttribute('download',''); b.target='_blank'; b.rel='noopener';
+      b.textContent='⬇ Español';
+      b.title='Versión con subtítulos en español';
+      dls.appendChild(b);
+    }
+
+    row.appendChild(dls);
     c.appendChild(row);
   });
 }
