@@ -891,6 +891,14 @@ if(db){
 }
 
 function setSyncUI(on){
+  // 스페인어 자막판을 보는 중이면 어떤 경로로도 Sync 를 켤 수 없다
+  // (상단 Sync 버튼 / 하단 배너 [Enable Sync] 모두 여기로 들어온다)
+  if(on && _esViewing){
+    hideBanner();
+    toast('Spanish edition — page numbers differ from the lecturer\'s file, so sync stays off. '
+         +'Edición en español — la sincronización permanece desactivada.',5000);
+    return;
+  }
   syncOn=on;
   const btn=$('syncPill');
   btn.classList.toggle('sync-on',on);
@@ -912,14 +920,7 @@ function setSyncUI(on){
   }
 }
 
-$('syncPill').onclick=()=>{
-  if(_esViewing){
-    toast('Spanish edition — page numbers differ from the lecturer\'s file, so sync is off. '
-         +'Edición en español — la sincronización está desactivada.',5000);
-    return;
-  }
-  setSyncUI(!syncOn);
-};
+$('syncPill').onclick=()=>setSyncUI(!syncOn);
 
 // ── SYNC BANNER ────────────────────────────────────────────────────
 function showBanner(){
@@ -1245,13 +1246,14 @@ $('fileInput').onchange=async e=>{
 /* ── 원격 PDF 열기 / 저장 ────────────────────────────────────────
    스페인어 자막판은 원본과 페이지 번호가 다르므로,
    그것을 열었을 때는 강사 페이지 동기화를 강제로 끄고 잠근다. */
-let _esViewing=false;
+var _esViewing=false;
 
 function _setEsLock(on){
   _esViewing=!!on;
   const p=$('syncPill'); if(!p) return;
   if(_esViewing){
     if(syncOn) setSyncUI(false);
+    hideBanner();
     p.style.opacity='.35'; p.style.cursor='not-allowed';
     p.title='Spanish edition — page sync disabled (different page numbering)';
   } else {
