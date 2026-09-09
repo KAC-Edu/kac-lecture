@@ -291,12 +291,26 @@ body{display:flex;flex-direction:column;}
 /* 다운로드 버튼 묶음 — 원본 PDF + 스페인어 자막판 */
 .mat-dls{display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;}
 .mat-dl.es{background:var(--gold);color:#1a1a1a;}
+/* [📖 열기 | ⬇ 저장] 한 쌍 */
+.mat-grp{display:flex;align-items:stretch;border-radius:8px;overflow:hidden;flex-shrink:0;}
+.mat-grp>*{border-radius:0;border:none;cursor:pointer;font-family:inherit;}
+.mat-save{padding:9px 13px;font-size:14px;font-weight:800;line-height:1.25;
+  background:var(--wine-dk);color:#fff;border-left:1px solid rgba(255,255,255,.22);}
+.mat-grp.es .mat-save{background:#a8894f;color:#1a1a1a;border-left-color:rgba(0,0,0,.22);}
+.mat-grp>*:hover{filter:brightness(1.12);}
+/* 사용법 안내 */
+.mat-help{background:rgba(201,169,110,.07);border:1px solid rgba(201,169,110,.22);
+  border-radius:10px;padding:11px 14px;margin-bottom:12px;font-size:12px;line-height:1.7;
+  color:rgba(201,169,110,.9);flex-shrink:0;}
+.mat-help b{color:var(--text);}
 @media(max-width:520px){
   /* 좁은 화면 : 제목 한 줄, 다운로드 버튼은 그 아래 전체폭 */
   .mat-item{align-items:flex-start;flex-wrap:wrap;}
   .mat-info{flex:1 1 100%;}
   .mat-dls{width:100%;flex:1 1 100%;justify-content:stretch;margin-top:10px;flex-wrap:nowrap;}
-  .mat-dls .mat-dl{flex:1;text-align:center;padding:11px 8px;}
+  .mat-dls .mat-grp{flex:1;}
+  .mat-dls .mat-dl{flex:1;text-align:center;padding:12px 6px;}
+  .mat-save{padding:12px 14px;}
 }
 /* 자료 목록 — 자체 스크롤 영역 (항목이 많아도 아래까지 내려감) */
 #matList{
@@ -898,7 +912,14 @@ function setSyncUI(on){
   }
 }
 
-$('syncPill').onclick=()=>setSyncUI(!syncOn);
+$('syncPill').onclick=()=>{
+  if(_esViewing){
+    toast('Spanish edition — page numbers differ from the lecturer\'s file, so sync is off. '
+         +'Edición en español — la sincronización está desactivada.',5000);
+    return;
+  }
+  setSyncUI(!syncOn);
+};
 
 // ── SYNC BANNER ────────────────────────────────────────────────────
 function showBanner(){
@@ -1059,6 +1080,13 @@ function renderMaterials(){
     return;
   }
   c.innerHTML='';
+  const help=document.createElement('div');
+  help.className='mat-help';
+  help.innerHTML='<b>📖 Open</b> — open the file right here, under the live subtitles. '
+    + '<b>⬇</b> — save it to your device (it goes to your <b>Downloads</b> folder).<br>'
+    + '<b>📖 Open</b> — abre el archivo aquí mismo, debajo de los subtítulos. '
+    + '<b>⬇</b> — guárdalo en tu dispositivo (carpeta <b>Descargas</b>).';
+  c.appendChild(help);
   MATERIALS.forEach(m=>{
     const row=document.createElement('div');
     row.className='mat-item';
@@ -1069,20 +1097,30 @@ function renderMaterials(){
     const dls=document.createElement('div');
     dls.className='mat-dls';
 
-    const a=document.createElement('a');
-    a.className='mat-dl'; a.href=m.url||'#';
-    a.setAttribute('download',''); a.target='_blank'; a.rel='noopener';
-    a.textContent='⬇ Download';
-    dls.appendChild(a);
+    // [📖 Open | ⬇] 한 쌍을 만든다
+    const mkGroup=(url,label,isEs)=>{
+      const g=document.createElement('div');
+      g.className='mat-grp'+(isEs?' es':'');
+      const op=document.createElement('button');
+      op.className='mat-dl'+(isEs?' es':'');
+      op.textContent=label;
+      op.title=isEs
+        ? 'Abrir aquí (con subtítulos) — la sincronización de páginas queda desactivada'
+        : 'Open here, below the live subtitles';
+      op.onclick=()=>openRemotePdf(url, m.title||'', isEs);
+      const sv=document.createElement('button');
+      sv.className='mat-save'; sv.textContent='⬇';
+      sv.title=isEs ? 'Guardar en tu dispositivo' : 'Save to your device (Downloads folder)';
+      sv.onclick=()=>saveRemote(url);
+      g.appendChild(op); g.appendChild(sv);
+      return g;
+    };
+
+    dls.appendChild(mkGroup(m.url||'', '📖 Open', false));
 
     // 스페인어 자막판 — 강사가 켜둔 경우에만 노출
     if(ES_ENABLED && m.esOn && m.urlEs){
-      const b=document.createElement('a');
-      b.className='mat-dl es'; b.href=m.urlEs;
-      b.setAttribute('download',''); b.target='_blank'; b.rel='noopener';
-      b.textContent='⬇ Español';
-      b.title='Versión con subtítulos en español';
-      dls.appendChild(b);
+      dls.appendChild(mkGroup(m.urlEs, '📖 Español', true));
     }
 
     row.appendChild(dls);
@@ -1195,6 +1233,7 @@ $('fileInput').onchange=async e=>{
     const buf=await f.arrayBuffer();
     pdfDoc=await pdfjsLib.getDocument({data:new Uint8Array(buf)}).promise;
     totPages=pdfDoc.numPages;curPage=1;
+    _setEsLock(false);
     $('pdfEmpty').style.display='none';canvas.style.display='block';
     renderPage(1);
     toast(`✅ ${f.name} (${totPages} pages)`);
@@ -1202,6 +1241,70 @@ $('fileInput').onchange=async e=>{
     if(!syncOn) showBanner();
   }catch(e){toast('PDF load failed: '+e.message,3000);}
 };
+
+/* ── 원격 PDF 열기 / 저장 ────────────────────────────────────────
+   스페인어 자막판은 원본과 페이지 번호가 다르므로,
+   그것을 열었을 때는 강사 페이지 동기화를 강제로 끄고 잠근다. */
+let _esViewing=false;
+
+function _setEsLock(on){
+  _esViewing=!!on;
+  const p=$('syncPill'); if(!p) return;
+  if(_esViewing){
+    if(syncOn) setSyncUI(false);
+    p.style.opacity='.35'; p.style.cursor='not-allowed';
+    p.title='Spanish edition — page sync disabled (different page numbering)';
+  } else {
+    p.style.opacity=''; p.style.cursor='';
+    p.title='';
+  }
+}
+
+function _fileNameOf(url){
+  try{ const n=decodeURIComponent(new URL(url).pathname.split('/').pop()); return n||'material.pdf'; }
+  catch(_){ return 'material.pdf'; }
+}
+
+async function openRemotePdf(url,title,isEs){
+  if(!url) return;
+  if(!window.pdfjsLib){ toast('PDF library not loaded — refresh the page.',4000); return; }
+  closeMat();
+  toast('⏳ Loading '+(title||'PDF')+' …',120000);
+  try{
+    const doc=await pdfjsLib.getDocument({url:url}).promise;
+    pdfDoc=doc; totPages=doc.numPages; curPage=1;
+    _setEsLock(isEs);
+    $('pdfEmpty').style.display='none'; canvas.style.display='block';
+    renderPage(1);
+    toast((isEs?'✅ ES · ':'✅ ')+(title||'PDF')+' ('+totPages+' pages)'
+          +(isEs?' — page sync disabled':''),3500);
+    if(!isEs && !syncOn) showBanner();
+  }catch(e){
+    toast('여기서 바로 열 수 없습니다 · Could not open here — opened in a new tab instead.',6000);
+    window.open(url,'_blank','noopener');
+  }
+}
+
+async function saveRemote(url){
+  if(!url) return;
+  const fname=_fileNameOf(url);
+  toast('⏳ Preparing '+fname+' …',60000);
+  try{
+    const r=await fetch(url,{mode:'cors'});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const blob=await r.blob();
+    const u=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=u; a.download=fname;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(u),5000);
+    toast('⬇ '+fname+' — saved to your Downloads folder / carpeta Descargas',5000);
+  }catch(e){
+    window.open(url,'_blank','noopener');
+    toast('새 탭에서 열렸습니다 — 우측 상단 ⬇ 아이콘으로 저장하세요 · '
+         +'Opened in a new tab — use the ⬇ icon (top-right) to save it.',7000);
+  }
+}
 
 // ★ PDF renderPage — 강사 플랫폼과 동일: try-catch 없음, 간결하고 빠름
 async function renderPage(n){
