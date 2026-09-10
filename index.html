@@ -59,6 +59,15 @@ body{display:flex;flex-direction:column;}
 /* right group */
 .topbar-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
 
+/* 화면 언어 선택 */
+.uilang{display:flex;gap:3px;padding:3px;border-radius:9px;
+  border:1px solid var(--line);background:var(--panel2);flex-shrink:0;}
+.uilang-b{background:transparent;border:none;color:var(--dim);cursor:pointer;
+  font-family:inherit;font-size:11px;font-weight:700;letter-spacing:.4px;
+  padding:5px 9px;border-radius:6px;white-space:nowrap;transition:background .12s,color .12s;}
+.uilang-b:hover{color:var(--text);}
+.uilang-b.active{background:var(--gold);color:#1a1a1a;}
+
 /* clock */
 .clock{
   font-family:'SF Mono',Menlo,monospace;
@@ -632,14 +641,14 @@ body{display:flex;flex-direction:column;}
     <div class="brand-s">Korea Airports Corporation</div>
   </div>
 
-  <button class="btn primary" id="btnLoadPdf">📁 Open PDF</button>
+  <button class="btn primary" id="btnLoadPdf">📁 <span id="tOpenPdf">Open PDF</span></button>
 
-  <button class="btn gold" id="btnMaterials">📚 Materials <span class="badge" id="matBadge"></span></button>
+  <button class="btn gold" id="btnMaterials">📚 <span id="tMaterials">Materials</span> <span class="badge" id="matBadge"></span></button>
 
-  <button class="btn" id="btnQuiz" style="display:none;" title="Pre-course knowledge check">📝 Quiz</button>
+  <button class="btn" id="btnQuiz" style="display:none;">📝 <span id="tSurvey">Survey</span></button>
 
   <button class="btn" id="btnQA">
-    💬 Q&amp;A <span class="badge" id="qaBadge"></span>
+    💬 <span id="tQA">Q&amp;A</span> <span class="badge" id="qaBadge"></span>
   </button>
 
   <button class="btn sync-off" id="syncPill" title="Follow lecturer's page automatically">
@@ -662,6 +671,12 @@ body{display:flex;flex-direction:column;}
       <div class="dot"></div>
       <span id="connTxt">Waiting</span>
     </div>
+
+    <!-- 화면 언어 -->
+    <div class="uilang" id="uiLang">
+      <button class="uilang-b active" id="uiEn" title="English">🇬🇧 EN</button>
+      <button class="uilang-b" id="uiEs" title="Español">🇪🇸 ES</button>
+    </div>
   </div>
 </div>
 
@@ -669,7 +684,7 @@ body{display:flex;flex-direction:column;}
 <div class="sync-banner" id="syncBanner">
   <div class="sync-banner-icon">🔗</div>
   <div class="sync-banner-text">
-    <div class="sync-banner-title">Follow the Lecturer's Slides</div>
+    <div class="sync-banner-title" id="tBanTitle">Follow the Lecturer's Slides</div>
     <div class="sync-banner-sub">Enable sync to automatically follow the page the lecturer is showing.</div>
   </div>
   <div class="sync-banner-btns">
@@ -693,31 +708,21 @@ body{display:flex;flex-direction:column;}
       </div>
       <div class="pdf-empty" id="pdfEmpty">
         <div class="pdf-empty-icon">📖</div>
-        <div class="pdf-empty-title">No material loaded</div>
+        <div class="pdf-empty-title" id="tEmptyTitle">No material loaded</div>
         <div class="pdf-memo">
           <div class="pdf-memo-row">
             <span class="pdf-memo-icon">☁️</span>
-            <div><b>Get Materials</b><br>Tap <span class="key">📚 Materials</span> in the top bar → download the lecture PDF → open it with <span class="key">📁 Open PDF</span></div>
+            <div id="tMemo1"></div>
           </div>
           <div class="pdf-memo-divider"></div>
           <div class="pdf-memo-row">
             <span class="pdf-memo-icon">🖱️</span>
-            <div><b>Page Navigation</b><br>
-              <span class="nav-mouse">
-                <span class="key">Left-click</span> next &nbsp;
-                <span class="key">Right-click</span> prev &nbsp;
-                <span class="key">← →</span> arrow keys
-              </span>
-              <span class="nav-touch">
-                <span class="key">👆 Swipe left</span> next &nbsp;
-                <span class="key">Swipe right 👆</span> prev
-              </span>
-            </div>
+            <div id="tMemo2"></div>
           </div>
           <div class="pdf-memo-divider"></div>
           <div class="pdf-memo-row pdf-memo-sync">
             <span class="pdf-memo-icon">🔗</span>
-            <div><b>Sync with Lecturer</b><br>Toggle <span class="key sync-key">Sync: OFF</span> in the top bar to automatically follow the page the lecturer is currently showing</div>
+            <div id="tMemo3"></div>
           </div>
         </div>
       </div>
@@ -730,7 +735,7 @@ body{display:flex;flex-direction:column;}
     <div class="sub-hd">
       <div class="sub-lbl">
         <div class="live-dot" id="liveDot"></div>
-        <span>Live Subtitles</span>
+        <span id="tLiveSub">Live Subtitles</span>
       </div>
       <div class="sub-ctrl">
         <button class="sub-sz-btn" id="btnSmall" title="Decrease subtitle size">A−</button>
@@ -750,16 +755,16 @@ body{display:flex;flex-direction:column;}
     <div class="qa-bar">
       <button class="qa-close" id="btnMatClose" title="Return to the lecture screen">
         <span class="qa-close-arrow">←</span>
-        <span class="qa-close-full">Back to Lecture</span>
-        <span class="qa-close-short">Back</span>
+        <span class="qa-close-full tBack">Back to Lecture</span>
+        <span class="qa-close-short tBackShort">Back</span>
       </button>
-      <div class="qa-bar-title">📚 Materials — Download</div>
+      <div class="qa-bar-title" id="tMatBar">📚 Materials — Download</div>
     </div>
     <div class="qa-stage">
       <div id="matList"></div>
     </div>
     <div class="qa-back-bottom">
-      <button id="btnMatClose2">← &nbsp;Back to Lecture</button>
+      <button id="btnMatClose2">← &nbsp;<span class="tBack">Back to Lecture</span></button>
     </div>
   </div>
 
@@ -768,16 +773,12 @@ body{display:flex;flex-direction:column;}
     <div class="qa-bar">
       <button class="qa-close" id="btnQzClose" title="Return to the lecture screen (Esc)">
         <span class="qa-close-arrow">&larr;</span>
-        <span class="qa-close-full">Back to Lecture</span>
-        <span class="qa-close-short">Back</span>
+        <span class="qa-close-full tBack">Back to Lecture</span>
+        <span class="qa-close-short tBackShort">Back</span>
       </button>
-      <div class="qa-bar-title">&#128221; Pre-course Check</div>
+      <div class="qa-bar-title" id="tQzBar">&#128221; Pre-course Survey</div>
     </div>
     <div class="qa-stage">
-      <div class="qz-langrow">
-        <button class="qz-lang active" id="qzLangEn">&#127468;&#127463; English</button>
-        <button class="qz-lang" id="qzLangEs">&#127466;&#127480; Espa&ntilde;ol</button>
-      </div>
       <div id="qzList2"></div>
       <div class="qz-bottom" id="qzBottom">
         <span class="qz-prog" id="qzProg">0 / 0</span>
@@ -785,7 +786,7 @@ body{display:flex;flex-direction:column;}
       </div>
     </div>
     <div class="qa-back-bottom">
-      <button id="btnQzClose2">&larr; &nbsp;Back to Lecture</button>
+      <button id="btnQzClose2">&larr; &nbsp;<span class="tBack">Back to Lecture</span></button>
     </div>
   </div>
 
@@ -794,14 +795,14 @@ body{display:flex;flex-direction:column;}
     <div class="qa-bar">
       <button class="qa-close" id="btnQAClose" title="Return to the lecture screen (Esc)">
         <span class="qa-close-arrow">←</span>
-        <span class="qa-close-full">Back to Lecture</span>
-        <span class="qa-close-short">Back</span>
+        <span class="qa-close-full tBack">Back to Lecture</span>
+        <span class="qa-close-short tBackShort">Back</span>
       </button>
-      <div class="qa-bar-title">💬 Q&amp;A — Ask a Question</div>
+      <div class="qa-bar-title" id="tQaBar">💬 Q&amp;A — Ask a Question</div>
     </div>
     <div class="qa-stage">
       <div class="qa-in">
-        <h3>📝 Send a question (anonymous)</h3>
+        <h3>📝 <span id="tQaHead">Send a question (anonymous)</span></h3>
         <div class="qa-lang-row" style="display:flex;gap:6px;margin-bottom:8px;">
           <button class="qa-lang active" data-lang="en">🇬🇧 English</button>
           <button class="qa-lang" data-lang="es">🇪🇸 Español</button>
@@ -812,18 +813,18 @@ body{display:flex;flex-direction:column;}
         <div class="qa-row">
           <span class="qa-cnt" id="qaCnt">0 / 500</span>
           <div style="display:flex;gap:8px;align-items:center;">
-            <button class="qa-mic" id="btnMic" title="Ask by voice">🎤 Speak</button>
+            <button class="qa-mic" id="btnMic" title="Ask by voice">🎤 <span id="tSpeak">Speak</span></button>
             <button class="qa-send" id="btnSend" disabled>Send</button>
           </div>
         </div>
       </div>
       <div class="qa-hist">
-        <h3>📋 My Questions</h3>
+        <h3>📋 <span id="tQaMine">My Questions</span></h3>
         <div id="myQs"><div class="qa-empty">No questions yet.</div></div>
       </div>
     </div>
     <div class="qa-back-bottom">
-      <button id="btnQAClose2">← &nbsp;Back to Lecture</button>
+      <button id="btnQAClose2">← &nbsp;<span class="tBack">Back to Lecture</span></button>
     </div>
   </div>
 </div>
@@ -908,6 +909,142 @@ if(db){
 }
 
 // ── TOAST ──────────────────────────────────────────────────────────
+/* ══ 화면 언어 (EN / ES) ══════════════════════════════════════════
+   영어를 모르는 교육생이 무엇을 눌러야 할지 몰라서, 상단에서 언어를
+   고르면 버튼·안내·설문·Q&A 문구가 전부 그 언어로 바뀐다. */
+let UILANG = 'en';
+try{ UILANG = localStorage.getItem('kac_uilang') || 'en'; }catch(_){}
+const T={
+ en:{
+  openPdf:'Open PDF', materials:'Materials', survey:'Survey', qa:'Q&A',
+  syncOn:'Sync: ON', syncOff:'Sync: OFF',
+  connWait:'Waiting', connOk:'Connected', connRe:'Reconnecting…',
+  banTitle:"Follow the Lecturer's Slides",
+  banSub:'Enable sync to automatically follow the page the lecturer is showing.',
+  banYes:'Enable Sync', banNo:'Not Now',
+  emptyTitle:'No material loaded',
+  memo1:'<b>Get Materials</b><br>Tap <span class="key">📚 Materials</span> in the top bar → open it here with <span class="key">📖 Open</span>, or save it with <span class="key">⬇</span>',
+  memo2:'<b>Page Navigation</b><br><span class="nav-mouse"><span class="key">Left-click</span> next &nbsp;<span class="key">Right-click</span> prev &nbsp;<span class="key">← →</span> arrow keys</span><span class="nav-touch"><span class="key">👆 Swipe left</span> next &nbsp;<span class="key">Swipe right 👆</span> prev</span>',
+  memo3:'<b>Sync with Lecturer</b><br>Toggle <span class="key sync-key">Sync: OFF</span> in the top bar to automatically follow the page the lecturer is currently showing',
+  liveSub:'Live Subtitles',
+  subWait:'🎤 Waiting for lecturer…', subConn:'⚠️ Connecting to lecture…',
+  subStart:'🎤 Waiting for lecturer to start…',
+  back:'Back to Lecture', backShort:'Back',
+  matBar:'📚 Materials — Download',
+  matHelp:'<b>📖 Open</b> — open the file right here, under the live subtitles. <b>⬇</b> — save it to your device (it goes to your <b>Downloads</b> folder).',
+  matNone:'No materials posted yet.',
+  matOpen:'📖 Open', matOpenEs:'📖 Español',
+  matOpenTip:'Open here, below the live subtitles', matSaveTip:'Save to your device (Downloads folder)',
+  qzBar:'📝 Pre-course Survey', qzSubmit:'Submit',
+  qzDoneT:'Answers submitted',
+  qzDoneS:'Thank you. Your instructor will go over the results in class.',
+  qzNone:'No questions posted yet.',
+  qzMulti:'Select all that apply', qzAll:'Please answer every question.',
+  qzSent:'✅ Submitted',
+  qaBar:'💬 Q&A — Ask a Question', qaHead:'Send a question (anonymous)',
+  qaMine:'My Questions', qaNone:'No questions yet.',
+  qaPh:'Type your question, or tap the mic to speak…',
+  speak:'Speak', send:'Send', sending:'Sending…',
+  sent:'✓ Question sent to lecturer', sendFail:'Send failed. Try again.',
+  connErr:'Connection error.', micDenied:'Please allow microphone access.',
+  syncOnMsg:"🔗 Sync ON — following lecturer's page", syncOffMsg:'Sync OFF — navigate freely',
+  syncAny:'You can enable Sync anytime from the top bar.',
+  esNoSync:'Spanish edition — page numbers differ, so sync stays off.',
+  loading:'⏳ Loading', preparing:'⏳ Preparing',
+  savedTo:'— saved to your Downloads folder',
+  openFail:'Could not open here — opened in a new tab instead.',
+  saveFail:'Opened in a new tab — use the ⬇ icon (top-right) to save it.',
+  notConn:'Not connected to the lecture server.',
+  pdfLib:'PDF library not loaded — refresh the page.'
+ },
+ es:{
+  openPdf:'Abrir PDF', materials:'Materiales', survey:'Encuesta', qa:'Preguntas',
+  syncOn:'Sinc.: SÍ', syncOff:'Sinc.: NO',
+  connWait:'Esperando', connOk:'Conectado', connRe:'Reconectando…',
+  banTitle:'Seguir las diapositivas del instructor',
+  banSub:'Actíva la sincronización para seguir automáticamente la página que muestra el instructor.',
+  banYes:'Activar', banNo:'Ahora no',
+  emptyTitle:'Ningún material abierto',
+  memo1:'<b>Obtener materiales</b><br>Pulsa <span class="key">📚 Materiales</span> arriba → ábrelo aquí con <span class="key">📖 Abrir</span> o guárdalo con <span class="key">⬇</span>',
+  memo2:'<b>Cambiar de página</b><br><span class="nav-mouse"><span class="key">Clic izquierdo</span> siguiente &nbsp;<span class="key">Clic derecho</span> anterior &nbsp;<span class="key">← →</span> flechas</span><span class="nav-touch"><span class="key">👆 Desliza a la izquierda</span> siguiente &nbsp;<span class="key">Desliza a la derecha 👆</span> anterior</span>',
+  memo3:'<b>Sincronizar con el instructor</b><br>Pulsa <span class="key sync-key">Sinc.: NO</span> arriba para seguir automáticamente la página que muestra el instructor',
+  liveSub:'Subtítulos en vivo',
+  subWait:'🎤 Esperando al instructor…', subConn:'⚠️ Conectando a la clase…',
+  subStart:'🎤 Esperando a que el instructor comience…',
+  back:'Volver a la clase', backShort:'Volver',
+  matBar:'📚 Materiales — Descargar',
+  matHelp:'<b>📖 Abrir</b> — abre el archivo aquí mismo, debajo de los subtítulos. <b>⬇</b> — guárdalo en tu dispositivo (carpeta <b>Descargas</b>).',
+  matNone:'El instructor aún no ha publicado materiales.',
+  matOpen:'📖 Abrir', matOpenEs:'📖 Español',
+  matOpenTip:'Abrir aquí, debajo de los subtítulos', matSaveTip:'Guardar en tu dispositivo (carpeta Descargas)',
+  qzBar:'📝 Encuesta previa al curso', qzSubmit:'Enviar',
+  qzDoneT:'Respuestas enviadas',
+  qzDoneS:'Gracias. El instructor revisará los resultados durante la clase.',
+  qzNone:'Todavía no hay preguntas.',
+  qzMulti:'Selecciona todas las que correspondan', qzAll:'Responde todas las preguntas.',
+  qzSent:'✅ Enviado',
+  qaBar:'💬 Preguntas — Haz una pregunta', qaHead:'Envía una pregunta (anónima)',
+  qaMine:'Mis preguntas', qaNone:'Aún no hay preguntas.',
+  qaPh:'Escribe tu pregunta, o pulsa el micrófono para hablar…',
+  speak:'Hablar', send:'Enviar', sending:'Enviando…',
+  sent:'✓ Pregunta enviada al instructor', sendFail:'Error al enviar. Inténtalo de nuevo.',
+  connErr:'Error de conexión.', micDenied:'Permite el acceso al micrófono.',
+  syncOnMsg:'🔗 Sincronización activada — siguiendo al instructor',
+  syncOffMsg:'Sincronización desactivada — navega libremente',
+  syncAny:'Puedes activar la sincronización en cualquier momento desde la barra superior.',
+  esNoSync:'Edición en español — la numeración de páginas difiere, la sincronización queda desactivada.',
+  loading:'⏳ Cargando', preparing:'⏳ Preparando',
+  savedTo:'— guardado en tu carpeta Descargas',
+  openFail:'No se pudo abrir aquí — se abrió en una pestaña nueva.',
+  saveFail:'Se abrió en una pestaña nueva — usa el icono ⬇ (arriba a la derecha) para guardarlo.',
+  notConn:'Sin conexión con el servidor de la clase.',
+  pdfLib:'La librería PDF no se cargó — recarga la página.'
+ }
+};
+function t(k){ const d=T[UILANG]||T.en; return (d[k]!==undefined)?d[k]:(T.en[k]!==undefined?T.en[k]:k); }
+function _txt(id,v){ const e=$(id); if(e) e.textContent=v; }
+function _htm(id,v){ const e=$(id); if(e) e.innerHTML=v; }
+
+function applyUILang(){
+  try{ localStorage.setItem('kac_uilang',UILANG); }catch(_){}
+  const en=UILANG==='en';
+  if($('uiEn')) $('uiEn').classList.toggle('active',en);
+  if($('uiEs')) $('uiEs').classList.toggle('active',!en);
+  document.documentElement.lang = UILANG;
+
+  _txt('tOpenPdf',t('openPdf')); _txt('tMaterials',t('materials'));
+  _txt('tSurvey',t('survey'));   _txt('tQA',t('qa'));
+  _txt('syncTxt', syncOn?t('syncOn'):t('syncOff'));
+  _txt('tBanTitle',t('banTitle'));
+  const bs=document.querySelector('.sync-banner-sub'); if(bs) bs.textContent=t('banSub');
+  _txt('syncBannerYes',t('banYes')); _txt('syncBannerNo',t('banNo'));
+  _txt('tEmptyTitle',t('emptyTitle'));
+  _htm('tMemo1',t('memo1')); _htm('tMemo2',t('memo2')); _htm('tMemo3',t('memo3'));
+  _txt('tLiveSub',t('liveSub'));
+  _htm('tMatBar',t('matBar')); _htm('tQzBar',t('qzBar')); _htm('tQaBar',t('qaBar'));
+  _txt('tQaHead',t('qaHead')); _txt('tQaMine',t('qaMine')); _txt('tSpeak',t('speak'));
+  const ta=$('qaText'); if(ta) ta.placeholder=t('qaPh');
+  const sb=$('btnSend'); if(sb && !sb.disabled) sb.textContent=t('send');
+  if(sb && sb.textContent!==t('sending')) sb.textContent=t('send');
+  document.querySelectorAll('.tBack').forEach(e=>{ e.textContent=t('back'); });
+  document.querySelectorAll('.tBackShort').forEach(e=>{ e.textContent=t('backShort'); });
+  if($('qzSubmit')) $('qzSubmit').textContent=t('qzSubmit');
+
+  // Q&A 작성 언어와 설문 언어도 화면 언어를 따라간다
+  try{
+    qaLang = UILANG;
+    document.querySelectorAll('.qa-lang').forEach(b=>{
+      b.classList.toggle('active', b.dataset.lang===UILANG);
+    });
+  }catch(_){}
+  try{ qzLang = UILANG; }catch(_){}
+
+  try{ updateSubHint(); }catch(_){}
+  if(typeof renderMaterials==='function' && $('viewMat') && $('viewMat').classList.contains('on')) renderMaterials();
+  if(typeof renderQz==='function' && typeof qzIsOpen==='function' && qzIsOpen()) renderQz();
+  if(typeof renderQs==='function'){ try{ renderQs(); }catch(_){} }
+}
+
 function toast(msg,ms=2200){
   const t=$('toast');t.textContent=msg;t.classList.add('on');
   clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('on'),ms);
@@ -929,7 +1066,7 @@ function setConn(on,lbl){
   updateSubHint();
 }
 if(db)db.ref('.info/connected').on('value',s=>{
-  setConn(!!s.val(),s.val()?'Connected':'Reconnecting…');
+  setConn(!!s.val(),s.val()?t('connOk'):t('connRe'));
 });
 
 // ── PRESENCE ───────────────────────────────────────────────────────
@@ -948,9 +1085,9 @@ function updateSubHint(){
   if(!el)return;
   const connected=$('conn').classList.contains('on');
   if(!connected){
-    el.textContent='⚠️ Connecting to lecture…';
+    el.textContent=t('subConn');
   } else if(!lastFinal&&!interim){
-    el.textContent='🎤 Waiting for lecturer to start…';
+    el.textContent=t('subStart');
   }
 }
 
@@ -976,15 +1113,14 @@ function setSyncUI(on){
   // (상단 Sync 버튼 / 하단 배너 [Enable Sync] 모두 여기로 들어온다)
   if(on && _esViewing){
     hideBanner();
-    toast('Spanish edition — page numbers differ from the lecturer\'s file, so sync stays off. '
-         +'Edición en español — la sincronización permanece desactivada.',5000);
+    toast(t('esNoSync'),5000);
     return;
   }
   syncOn=on;
   const btn=$('syncPill');
   btn.classList.toggle('sync-on',on);
   btn.classList.toggle('sync-off',!on);
-  $('syncTxt').textContent=on?'Sync: ON':'Sync: OFF';
+  $('syncTxt').textContent=on?t('syncOn'):t('syncOff');
   // Lock/unlock manual page navigation overlay
   $('syncLock').classList.toggle('on',on);
   // Show/hide top-right badge in PDF area
@@ -994,10 +1130,10 @@ function setSyncUI(on){
       const n=_lastKnownPage;
       if(n>=1&&n<=totPages){curPage=n;renderPage(n);}
     }
-    toast('🔗 Sync ON — following lecturer\'s page',2500);
+    toast(t('syncOnMsg'),2500);
     hideBanner();
   } else {
-    toast('Sync OFF — navigate freely',2000);
+    toast(t('syncOffMsg'),2000);
   }
 }
 
@@ -1011,7 +1147,7 @@ function hideBanner(){
   $('syncBanner').classList.remove('show');
 }
 $('syncBannerYes').onclick=()=>setSyncUI(true);
-$('syncBannerNo').onclick=()=>{hideBanner();toast('You can enable Sync anytime from the top bar.',3000);};
+$('syncBannerNo').onclick=()=>{hideBanner();toast(t('syncAny'),3000);};
 
 // ── SUBTITLES ──────────────────────────────────────────────────────
 let lastFinal='',interim='',_el=null,subHist=[];
@@ -1142,32 +1278,29 @@ qaText.addEventListener('keydown',e=>{
 $('btnSend').onclick=sendQ;
 
 async function sendQ(){
-  if(!db){toast('Connection error.',3000);return;}
+  if(!db){toast(t('connErr'),3000);return;}
   const txt=qaText.value.trim();if(!txt)return;
-  $('btnSend').disabled=true;$('btnSend').textContent='Sending…';
+  $('btnSend').disabled=true;$('btnSend').textContent=t('sending');
   try{
     await db.ref('questions/'+SESSION).push(
       {text:txt,clientId:CID,timestamp:Date.now(),status:'pending',lang:qaLang});
     qaText.value='';$('qaCnt').textContent='0 / 500';
-    toast('✓ Question sent to lecturer');
-  }catch{toast('Send failed. Try again.',3000);}
-  finally{$('btnSend').disabled=false;$('btnSend').textContent='Send';}
+    toast(t('sent'));
+  }catch{toast(t('sendFail'),3000);}
+  finally{$('btnSend').disabled=false;$('btnSend').textContent=t('send');}
 }
 
 // ── 자료 목록 (Materials) ──────────────────────────────────────
 function renderMaterials(){
   const c=$('matList');
   if(!MATERIALS.length){
-    c.innerHTML='<div class="mat-empty">등록된 자료가 없습니다.<br>The lecturer has not posted any materials yet.</div>';
+    c.innerHTML='<div class="mat-empty">'+t('matNone')+'</div>';
     return;
   }
   c.innerHTML='';
   const help=document.createElement('div');
   help.className='mat-help';
-  help.innerHTML='<b>📖 Open</b> — open the file right here, under the live subtitles. '
-    + '<b>⬇</b> — save it to your device (it goes to your <b>Downloads</b> folder).<br>'
-    + '<b>📖 Open</b> — abre el archivo aquí mismo, debajo de los subtítulos. '
-    + '<b>⬇</b> — guárdalo en tu dispositivo (carpeta <b>Descargas</b>).';
+  help.innerHTML=t('matHelp');
   c.appendChild(help);
   MATERIALS.forEach(m=>{
     const row=document.createElement('div');
@@ -1186,23 +1319,21 @@ function renderMaterials(){
       const op=document.createElement('button');
       op.className='mat-dl'+(isEs?' es':'');
       op.textContent=label;
-      op.title=isEs
-        ? 'Abrir aquí (con subtítulos) — la sincronización de páginas queda desactivada'
-        : 'Open here, below the live subtitles';
+      op.title=t('matOpenTip');
       op.onclick=()=>openRemotePdf(url, m.title||'', isEs);
       const sv=document.createElement('button');
       sv.className='mat-save'; sv.textContent='⬇';
-      sv.title=isEs ? 'Guardar en tu dispositivo' : 'Save to your device (Downloads folder)';
+      sv.title=t('matSaveTip');
       sv.onclick=()=>saveRemote(url);
       g.appendChild(op); g.appendChild(sv);
       return g;
     };
 
-    dls.appendChild(mkGroup(m.url||'', '📖 Open', false));
+    dls.appendChild(mkGroup(m.url||'', t('matOpen'), false));
 
     // 스페인어 자막판 — 강사가 켜둔 경우에만 노출
     if(ES_ENABLED && m.esOn && m.urlEs){
-      dls.appendChild(mkGroup(m.urlEs, '📖 Español', true));
+      dls.appendChild(mkGroup(m.urlEs, t('matOpenEs'), true));
     }
 
     row.appendChild(dls);
@@ -1257,23 +1388,20 @@ function qzUpdateProg(){
 
 function renderQz(){
   const c=$('qzList2'); if(!c) return;
-  if($('qzSubmit')) $('qzSubmit').textContent = qzLang==='es' ? 'Enviar' : 'Submit';
+  if($('qzSubmit')) $('qzSubmit').textContent = t('qzSubmit');
 
   if(qzSubmitted){
     if($('qzBottom')) $('qzBottom').style.display='none';
     c.innerHTML='<div class="qz-done"><div class="qz-done-ic">&#9989;</div>'
-      +'<div class="qz-done-t">'+(qzLang==='es'?'Respuestas enviadas':'Answers submitted')+'</div>'
-      +'<div class="qz-done-s">'+(qzLang==='es'
-        ? 'Gracias. El instructor revisar&aacute; los resultados durante la clase.'
-        : 'Thank you. Your instructor will go over the results in class.')+'</div></div>';
+      +'<div class="qz-done-t">'+t('qzDoneT')+'</div>'
+      +'<div class="qz-done-s">'+t('qzDoneS')+'</div></div>';
     return;
   }
   if($('qzBottom')) $('qzBottom').style.display='';
 
   const list=qzSorted();
   if(!list.length){
-    c.innerHTML='<div class="mat-empty">'+(qzLang==='es'
-      ? 'Todav&iacute;a no hay preguntas.' : 'No questions posted yet.')+'</div>';
+    c.innerHTML='<div class="mat-empty">'+t('qzNone')+'</div>';
     qzUpdateProg();
     return;
   }
@@ -1317,9 +1445,7 @@ function renderQz(){
     const multi = (ty==='multi');
     if(multi){
       const h=document.createElement('div'); h.className='qz-multi-hint';
-      h.textContent = qzLang==='es'
-        ? 'Selecciona todas las que correspondan'
-        : 'Select all that apply';
+      h.textContent = t('qzMulti');
       card.appendChild(h);
       if(!Array.isArray(qzPick[qid])) qzPick[qid]=Array.isArray(qzPick[qid])?qzPick[qid]:[];
     }
@@ -1358,7 +1484,7 @@ function renderQz(){
 }
 
 function qzSubmitAnswers(){
-  if(!db){ toast('Not connected to the lecture server.',3000); return; }
+  if(!db){ toast(t('notConn'),3000); return; }
   const list=qzSorted();
   if(!list.length) return;
   const a={}; let ok=true;
@@ -1367,14 +1493,14 @@ function qzSubmitAnswers(){
     if(!qzAnswered(v)) ok=false; else a[e[0]]=v;
   });
   if(!ok){
-    toast(qzLang==='es' ? 'Responde todas las preguntas.' : 'Please answer every question.',3000);
+    toast(t('qzAll'),3000);
     return;
   }
   if($('qzSubmit')) $('qzSubmit').disabled=true;
   db.ref(QUIZ_PATH+'/resp/'+CID).set({a:a, ts:Date.now()})
     .then(function(){
       qzSubmitted=true; renderQz();
-      toast(qzLang==='es' ? '✅ Enviado' : '✅ Submitted',2500);
+      toast(t('qzSent'),2500);
     })
     .catch(function(err){
       if($('qzSubmit')) $('qzSubmit').disabled=false;
@@ -1408,16 +1534,8 @@ $('btnQuiz') && ($('btnQuiz').onclick=function(){
 $('btnQzClose')  && ($('btnQzClose').onclick=closeQz);
 $('btnQzClose2') && ($('btnQzClose2').onclick=closeQz);
 $('qzSubmit')    && ($('qzSubmit').onclick=qzSubmitAnswers);
-$('qzLangEn') && ($('qzLangEn').onclick=function(){
-  qzLang='en';
-  $('qzLangEn').classList.add('active'); $('qzLangEs').classList.remove('active');
-  renderQz();
-});
-$('qzLangEs') && ($('qzLangEs').onclick=function(){
-  qzLang='es';
-  $('qzLangEs').classList.add('active'); $('qzLangEn').classList.remove('active');
-  renderQz();
-});
+$('uiEn') && ($('uiEn').onclick=function(){ UILANG='en'; applyUILang(); });
+$('uiEs') && ($('uiEs').onclick=function(){ UILANG='es'; applyUILang(); });
 $('btnMaterials') && ($('btnMaterials').onclick=()=>{
   renderMaterials(); $('viewMat').classList.add('on'); hintBack($('btnMatClose'));
 });
@@ -1460,7 +1578,7 @@ let _qaRec=null, _qaRecOn=false;
       $('qaCnt').textContent=qaText.value.length+' / 500';
       $('btnSend').disabled=qaText.value.trim().length===0;
     };
-    _qaRec.onerror=ev=>{ if(ev.error==='not-allowed') toast('Please allow microphone access.',3500); };
+    _qaRec.onerror=ev=>{ if(ev.error==='not-allowed') toast(t('micDenied'),3500); };
     _qaRec.onend=()=>{ _qaRecOn=false; mic.classList.remove('rec'); mic.textContent='🎤 Speak'; };
     try{ _qaRec.start(); }catch(e){}
   };
@@ -1559,9 +1677,9 @@ function _fileNameOf(url){
 
 async function openRemotePdf(url,title,isEs){
   if(!url) return;
-  if(!window.pdfjsLib){ toast('PDF library not loaded — refresh the page.',4000); return; }
+  if(!window.pdfjsLib){ toast(t('pdfLib'),4000); return; }
   closeMat();
-  toast('⏳ Loading '+(title||'PDF')+' …',120000);
+  toast(t('loading')+' '+(title||'PDF')+' …',120000);
   try{
     const doc=await pdfjsLib.getDocument({url:url}).promise;
     pdfDoc=doc; totPages=doc.numPages; curPage=1;
@@ -1572,7 +1690,7 @@ async function openRemotePdf(url,title,isEs){
           +(isEs?' — page sync disabled':''),3500);
     if(!isEs && !syncOn) showBanner();
   }catch(e){
-    toast('여기서 바로 열 수 없습니다 · Could not open here — opened in a new tab instead.',6000);
+    toast(t('openFail'),6000);
     window.open(url,'_blank','noopener');
   }
 }
@@ -1580,7 +1698,7 @@ async function openRemotePdf(url,title,isEs){
 async function saveRemote(url){
   if(!url) return;
   const fname=_fileNameOf(url);
-  toast('⏳ Preparing '+fname+' …',60000);
+  toast(t('preparing')+' '+fname+' …',60000);
   try{
     const r=await fetch(url,{mode:'cors'});
     if(!r.ok) throw new Error('HTTP '+r.status);
@@ -1590,11 +1708,10 @@ async function saveRemote(url){
     a.href=u; a.download=fname;
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=>URL.revokeObjectURL(u),5000);
-    toast('⬇ '+fname+' — saved to your Downloads folder / carpeta Descargas',5000);
+    toast('⬇ '+fname+' '+t('savedTo'),5000);
   }catch(e){
     window.open(url,'_blank','noopener');
-    toast('새 탭에서 열렸습니다 — 우측 상단 ⬇ 아이콘으로 저장하세요 · '
-         +'Opened in a new tab — use the ⬇ icon (top-right) to save it.',7000);
+    toast(t('saveFail'),7000);
   }
 }
 
@@ -1683,6 +1800,9 @@ async function reqWake(){
 }
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&!wl)reqWake();});
 document.addEventListener('click',()=>{if(!wl)reqWake();},{once:true});
+
+// ── 화면 언어 최초 적용 — 모든 변수 선언이 끝난 뒤여야 한다 ────────
+applyUILang();
 </script>
 </body>
 </html>
