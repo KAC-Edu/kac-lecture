@@ -1698,9 +1698,9 @@ function renderQs(){
     const d=document.createElement('div');
     d.className='qi'+(res?' res':'');
     const hh=q.timestamp?new Date(q.timestamp):new Date();
-    const t=`${String(hh.getHours()).padStart(2,'0')}:${String(hh.getMinutes()).padStart(2,'0')}`;
+    const hhmm=`${String(hh.getHours()).padStart(2,'0')}:${String(hh.getMinutes()).padStart(2,'0')}`;
     d.innerHTML=`<span class="qi-st ${res?'r':'p'}">${res?t('qaDone'):t('qaWait')}</span>
-      <div class="qi-txt">${esc(q.text)}</div><div class="qi-t">${t}</div>`;
+      <div class="qi-txt">${esc(q.text)}</div><div class="qi-t">${hhmm}</div>`;
     c.appendChild(d);
   });
   // Badge: show pending count; turn green and auto-clear when all resolved
