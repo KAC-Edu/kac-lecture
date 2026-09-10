@@ -417,9 +417,9 @@ body{display:flex;flex-direction:column;}
 .qz-multi-hint{font-size:11px;color:var(--gold);font-weight:600;margin:-7px 0 11px;
   letter-spacing:.3px;}
 #viewQA{
-  position:absolute;top:0;left:0;right:0;bottom:0;
+  position:fixed;inset:0;z-index:60;
   background:var(--bg);display:none;flex-direction:column;
-  overflow:hidden;z-index:50;
+  overflow:hidden;
 }
 #viewQA.on{display:flex;}
 .qa-bar{
