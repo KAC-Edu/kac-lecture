@@ -358,6 +358,19 @@ body{display:flex;flex-direction:column;}
 .qz-done-ic{font-size:52px;margin-bottom:14px;}
 .qz-done-t{font-size:19px;font-weight:700;color:var(--gold);margin-bottom:9px;}
 .qz-done-s{font-size:13px;color:var(--dim);line-height:1.75;}
+/* 1~N 자기평가 척도 */
+.qz-sc-labs{display:flex;justify-content:space-between;gap:14px;
+  font-size:12px;color:var(--dim);line-height:1.45;margin-bottom:10px;}
+.qz-sc-labs span{max-width:47%;}
+.qz-sc-labs .r{text-align:right;}
+.qz-sc-row{display:flex;gap:8px;}
+.qz-sc{flex:1;min-width:0;background:var(--panel2);border:1px solid var(--line);
+  color:var(--text);border-radius:9px;padding:14px 4px;font-size:16px;font-weight:700;
+  cursor:pointer;font-family:inherit;transition:border-color .12s,background .12s;}
+.qz-sc:hover{border-color:var(--gold);}
+.qz-sc.sel{background:var(--gold);border-color:var(--gold);color:#1a1a1a;}
+.qz-multi-hint{font-size:11px;color:var(--gold);font-weight:600;margin:-7px 0 11px;
+  letter-spacing:.3px;}
 #viewQA{
   position:absolute;top:0;left:0;right:0;bottom:0;
   background:var(--bg);display:none;flex-direction:column;
@@ -1214,6 +1227,13 @@ function closeQz(){ if($('viewQuiz')) $('viewQuiz').classList.remove('on'); }
 /* 고른 언어가 비어 있으면 다른 언어로 폴백한다.
    강사가 스페인어만 넣었거나 영어만 넣었어도 그대로 보인다.
    한국어(qKo/oKo)는 강사 확인용이라 여기서는 절대 표시하지 않는다. */
+function qzTypeOf(m){ return (m && m.type) || 'choice'; }
+function qzPick2(a,b){ return qzLang==='es' ? (b||a||'') : (a||b||''); }
+function qzScaleLo(m){ return qzPick2(m.sLoEn, m.sLoEs); }
+function qzScaleHi(m){ return qzPick2(m.sHiEn, m.sHiEs); }
+function qzAnswered(v){
+  return (typeof v==='number') || (Array.isArray(v) && v.length>0);
+}
 function qzQtext(m){
   return qzLang==='es' ? (m.qEs || m.qEn || '') : (m.qEn || m.qEs || '');
 }
@@ -1230,7 +1250,7 @@ function qzOptions(m){
 function qzUpdateProg(){
   const list=qzSorted();
   let done=0;
-  list.forEach(e=>{ if(typeof qzPick[e[0]]==='number') done++; });
+  list.forEach(e=>{ if(qzAnswered(qzPick[e[0]])) done++; });
   if($('qzProg')) $('qzProg').textContent=done+' / '+list.length;
   if($('qzSubmit')) $('qzSubmit').disabled = (!list.length || done<list.length);
 }
@@ -1265,19 +1285,69 @@ function renderQz(){
     const hd=document.createElement('div'); hd.className='qz-qn'; hd.textContent='Q'+(qi+1);
     const tx=document.createElement('div'); tx.className='qz-qtx'; tx.textContent=qzQtext(m);
     card.appendChild(hd); card.appendChild(tx);
+    const ty=qzTypeOf(m);
+
+    if(ty==='scale'){
+      // 1 ~ N 자기평가. 양 끝 라벨을 위에 놓고 숫자 버튼을 가로로 편다
+      const n=m.sMax||5;
+      const labs=document.createElement('div'); labs.className='qz-sc-labs';
+      const l=document.createElement('span'); l.textContent=qzScaleLo(m);
+      const r=document.createElement('span'); r.className='r'; r.textContent=qzScaleHi(m);
+      labs.appendChild(l); labs.appendChild(r);
+      card.appendChild(labs);
+      const row=document.createElement('div'); row.className='qz-sc-row';
+      for(let i=0;i<n;i++){
+        const b=document.createElement('button');
+        b.type='button';
+        b.className='qz-sc'+(qzPick[qid]===i?' sel':'');
+        b.textContent=String(i+1);
+        b.onclick=function(){
+          qzPick[qid]=i;
+          const bs=row.querySelectorAll('.qz-sc');
+          for(let k=0;k<bs.length;k++) bs[k].classList.toggle('sel', k===i);
+          qzUpdateProg();
+        };
+        row.appendChild(b);
+      }
+      card.appendChild(row);
+      c.appendChild(card);
+      return;
+    }
+
+    const multi = (ty==='multi');
+    if(multi){
+      const h=document.createElement('div'); h.className='qz-multi-hint';
+      h.textContent = qzLang==='es'
+        ? 'Selecciona todas las que correspondan'
+        : 'Select all that apply';
+      card.appendChild(h);
+      if(!Array.isArray(qzPick[qid])) qzPick[qid]=Array.isArray(qzPick[qid])?qzPick[qid]:[];
+    }
+
     qzOptions(m).forEach(function(txt,i){
       const b=document.createElement('button');
       b.type='button';
-      b.className='qz-o'+(qzPick[qid]===i?' sel':'');
+      const on = multi ? (Array.isArray(qzPick[qid]) && qzPick[qid].indexOf(i)>=0)
+                       : (qzPick[qid]===i);
+      b.className='qz-o'+(on?' sel':'');
       const lb=document.createElement('span'); lb.className='qz-ol';
       lb.textContent=String.fromCharCode(65+i);
       const sp=document.createElement('span'); sp.textContent=txt;
       b.appendChild(lb); b.appendChild(sp);
       b.onclick=function(){
-        qzPick[qid]=i;
-        // 전체 재렌더 없이 클래스만 바꿔 스크롤 위치를 유지한다
         const opts=card.querySelectorAll('.qz-o');
-        for(let k=0;k<opts.length;k++) opts[k].classList.toggle('sel', k===i);
+        if(multi){
+          let arr = Array.isArray(qzPick[qid]) ? qzPick[qid].slice() : [];
+          const at=arr.indexOf(i);
+          if(at>=0) arr.splice(at,1); else arr.push(i);
+          arr.sort(function(x,y){return x-y;});
+          qzPick[qid]=arr;
+          for(let k=0;k<opts.length;k++) opts[k].classList.toggle('sel', arr.indexOf(k)>=0);
+        } else {
+          qzPick[qid]=i;
+          // 전체 재렌더 없이 클래스만 바꿔 스크롤 위치를 유지한다
+          for(let k=0;k<opts.length;k++) opts[k].classList.toggle('sel', k===i);
+        }
         qzUpdateProg();
       };
       card.appendChild(b);
@@ -1294,7 +1364,7 @@ function qzSubmitAnswers(){
   const a={}; let ok=true;
   list.forEach(function(e){
     const v=qzPick[e[0]];
-    if(typeof v!=='number') ok=false; else a[e[0]]=v;
+    if(!qzAnswered(v)) ok=false; else a[e[0]]=v;
   });
   if(!ok){
     toast(qzLang==='es' ? 'Responde todas las preguntas.' : 'Please answer every question.',3000);
