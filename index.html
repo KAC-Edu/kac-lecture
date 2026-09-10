@@ -67,6 +67,11 @@ body{display:flex;flex-direction:column;}
   padding:5px 9px;border-radius:6px;white-space:nowrap;transition:background .12s,color .12s;}
 .uilang-b:hover{color:var(--text);}
 .uilang-b.active{background:var(--gold);color:#1a1a1a;}
+/* 오버레이(자료·설문·Q&A) 안에서도 언어를 바꿀 수 있어야 한다 */
+.uilang-bar{margin-left:auto;}
+@media(max-width:520px){
+  .uilang-b{padding:5px 7px;font-size:10px;}
+}
 
 /* clock */
 .clock{
@@ -673,9 +678,9 @@ body{display:flex;flex-direction:column;}
     </div>
 
     <!-- 화면 언어 -->
-    <div class="uilang" id="uiLang">
-      <button class="uilang-b active" id="uiEn" title="English">🇬🇧 EN</button>
-      <button class="uilang-b" id="uiEs" title="Español">🇪🇸 ES</button>
+    <div class="uilang">
+      <button class="uilang-b active" data-ui="en" title="English">🇬🇧 EN</button>
+      <button class="uilang-b" data-ui="es" title="Español">🇪🇸 ES</button>
     </div>
   </div>
 </div>
@@ -759,6 +764,10 @@ body{display:flex;flex-direction:column;}
         <span class="qa-close-short tBackShort">Back</span>
       </button>
       <div class="qa-bar-title" id="tMatBar">📚 Materials — Download</div>
+      <div class="uilang uilang-bar">
+        <button class="uilang-b" data-ui="en" title="English">🇬🇧 EN</button>
+        <button class="uilang-b" data-ui="es" title="Español">🇪🇸 ES</button>
+      </div>
     </div>
     <div class="qa-stage">
       <div id="matList"></div>
@@ -777,6 +786,10 @@ body{display:flex;flex-direction:column;}
         <span class="qa-close-short tBackShort">Back</span>
       </button>
       <div class="qa-bar-title" id="tQzBar">&#128221; Pre-course Survey</div>
+      <div class="uilang uilang-bar">
+        <button class="uilang-b" data-ui="en" title="English">🇬🇧 EN</button>
+        <button class="uilang-b" data-ui="es" title="Español">🇪🇸 ES</button>
+      </div>
     </div>
     <div class="qa-stage">
       <div id="qzList2"></div>
@@ -799,6 +812,10 @@ body{display:flex;flex-direction:column;}
         <span class="qa-close-short tBackShort">Back</span>
       </button>
       <div class="qa-bar-title" id="tQaBar">💬 Q&amp;A — Ask a Question</div>
+      <div class="uilang uilang-bar">
+        <button class="uilang-b" data-ui="en" title="English">🇬🇧 EN</button>
+        <button class="uilang-b" data-ui="es" title="Español">🇪🇸 ES</button>
+      </div>
     </div>
     <div class="qa-stage">
       <div class="qa-in">
@@ -1007,9 +1024,9 @@ function _htm(id,v){ const e=$(id); if(e) e.innerHTML=v; }
 
 function applyUILang(){
   try{ localStorage.setItem('kac_uilang',UILANG); }catch(_){}
-  const en=UILANG==='en';
-  if($('uiEn')) $('uiEn').classList.toggle('active',en);
-  if($('uiEs')) $('uiEs').classList.toggle('active',!en);
+  document.querySelectorAll('.uilang-b').forEach(b=>{
+    b.classList.toggle('active', b.dataset.ui===UILANG);
+  });
   document.documentElement.lang = UILANG;
 
   _txt('tOpenPdf',t('openPdf')); _txt('tMaterials',t('materials'));
@@ -1534,8 +1551,9 @@ $('btnQuiz') && ($('btnQuiz').onclick=function(){
 $('btnQzClose')  && ($('btnQzClose').onclick=closeQz);
 $('btnQzClose2') && ($('btnQzClose2').onclick=closeQz);
 $('qzSubmit')    && ($('qzSubmit').onclick=qzSubmitAnswers);
-$('uiEn') && ($('uiEn').onclick=function(){ UILANG='en'; applyUILang(); });
-$('uiEs') && ($('uiEs').onclick=function(){ UILANG='es'; applyUILang(); });
+document.querySelectorAll('.uilang-b').forEach(function(b){
+  b.onclick=function(){ UILANG=b.dataset.ui; applyUILang(); };
+});
 $('btnMaterials') && ($('btnMaterials').onclick=()=>{
   renderMaterials(); $('viewMat').classList.add('on'); hintBack($('btnMatClose'));
 });
