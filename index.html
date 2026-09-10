@@ -52,6 +52,12 @@ body{display:flex;flex-direction:column;}
 .btn:hover{background:var(--wine);border-color:var(--wine);color:#fff;}
 .btn.gold{background:var(--gold);border-color:var(--gold);color:#000;font-weight:700;}
 .btn.gold:hover{background:#e0b85a;border-color:#e0b85a;}
+/* 해당 화면이 열려 있는 동안만 강조 — 늘 켜져 있는 것처럼 보이지 않게 */
+.btn.open-now{background:var(--gold);border-color:var(--gold);color:#1a1a1a;font-weight:700;}
+.btn.open-now:hover{background:#e0b85a;border-color:#e0b85a;color:#1a1a1a;}
+/* 새 자료가 있는데 아직 안 열어봤을 때만 살짝 알림 */
+.btn .badge{background:var(--wine);color:#fff;border-radius:9px;padding:0 6px;
+  font-size:10px;font-weight:800;line-height:16px;min-width:16px;text-align:center;}
 
 /* spacer pushes right group to far right */
 .topbar-spacer{flex:1;}
@@ -61,12 +67,37 @@ body{display:flex;flex-direction:column;}
 
 /* 화면 언어 선택 */
 .uilang{display:flex;gap:3px;padding:3px;border-radius:9px;
-  border:1px solid var(--line);background:var(--panel2);flex-shrink:0;}
-.uilang-b{background:transparent;border:none;color:var(--dim);cursor:pointer;
-  font-family:inherit;font-size:11px;font-weight:700;letter-spacing:.4px;
-  padding:5px 9px;border-radius:6px;white-space:nowrap;transition:background .12s,color .12s;}
-.uilang-b:hover{color:var(--text);}
-.uilang-b.active{background:var(--gold);color:#1a1a1a;}
+  border:1px solid rgba(201,169,110,.45);background:var(--panel2);flex-shrink:0;}
+.uilang-b{background:transparent;border:none;color:var(--text);cursor:pointer;
+  font-family:inherit;font-size:12px;font-weight:700;letter-spacing:.4px;
+  padding:6px 10px;border-radius:6px;white-space:nowrap;
+  transition:background .12s,color .12s;opacity:.75;}
+.uilang-b:hover{opacity:1;background:rgba(201,169,110,.14);}
+.uilang-b.active{background:var(--gold);color:#1a1a1a;opacity:1;}
+
+/* 첫 방문 언어 선택 */
+.langpick{
+  position:fixed;inset:0;z-index:200;display:none;
+  align-items:center;justify-content:center;padding:22px;
+  background:rgba(8,10,14,.94);backdrop-filter:blur(6px);
+}
+.langpick.on{display:flex;}
+.langpick-box{
+  background:var(--panel);border:1px solid rgba(201,169,110,.35);
+  border-radius:16px;padding:34px 30px;max-width:420px;width:100%;text-align:center;
+  box-shadow:0 18px 60px rgba(0,0,0,.6);
+}
+.langpick-ic{font-size:44px;margin-bottom:14px;}
+.langpick-t{font-size:19px;font-weight:700;color:var(--text);}
+.langpick-t2{font-size:15px;font-weight:600;color:var(--gold);margin-top:4px;}
+.langpick-btns{display:flex;flex-direction:column;gap:11px;margin:24px 0 16px;}
+.langpick-b{
+  background:var(--panel2);border:1px solid var(--line);color:var(--text);
+  border-radius:11px;padding:16px;font-size:17px;font-weight:700;
+  font-family:inherit;cursor:pointer;transition:background .13s,border-color .13s;
+}
+.langpick-b:hover{background:var(--gold);border-color:var(--gold);color:#1a1a1a;}
+.langpick-s{font-size:11px;color:var(--dim);line-height:1.7;}
 /* 오버레이(자료·설문·Q&A) 안에서도 언어를 바꿀 수 있어야 한다 */
 .uilang-bar{margin-left:auto;}
 @media(max-width:520px){
@@ -648,7 +679,7 @@ body{display:flex;flex-direction:column;}
 
   <button class="btn primary" id="btnLoadPdf">📁 <span id="tOpenPdf">Open PDF</span></button>
 
-  <button class="btn gold" id="btnMaterials">📚 <span id="tMaterials">Materials</span> <span class="badge" id="matBadge"></span></button>
+  <button class="btn" id="btnMaterials">📚 <span id="tMaterials">Materials</span> <span class="badge" id="matBadge"></span></button>
 
   <button class="btn" id="btnQuiz" style="display:none;">📝 <span id="tSurvey">Survey</span></button>
 
@@ -666,6 +697,12 @@ body{display:flex;flex-direction:column;}
   <div class="topbar-spacer"></div>
 
   <div class="topbar-right">
+    <!-- 화면 언어 — 가장 먼저 보이도록 앞에 둔다 -->
+    <div class="uilang">
+      <button class="uilang-b active" data-ui="en" title="English">🇬🇧 EN</button>
+      <button class="uilang-b" data-ui="es" title="Español">🇪🇸 ES</button>
+    </div>
+
     <!-- Clock KST -->
     <div class="clock">
       <span id="clockTime">--:--:--</span><span class="clock-tz">KST</span>
@@ -676,12 +713,21 @@ body{display:flex;flex-direction:column;}
       <div class="dot"></div>
       <span id="connTxt">Waiting</span>
     </div>
+  </div>
+</div>
 
-    <!-- 화면 언어 -->
-    <div class="uilang">
-      <button class="uilang-b active" data-ui="en" title="English">🇬🇧 EN</button>
-      <button class="uilang-b" data-ui="es" title="Español">🇪🇸 ES</button>
+<!-- ══ 첫 방문 언어 선택 ═══════════════════════════════════════════ -->
+<div class="langpick" id="langPick">
+  <div class="langpick-box">
+    <div class="langpick-ic">🌐</div>
+    <div class="langpick-t">Choose your language</div>
+    <div class="langpick-t2">Elige tu idioma</div>
+    <div class="langpick-btns">
+      <button class="langpick-b" data-ui="en">🇬🇧&nbsp; English</button>
+      <button class="langpick-b" data-ui="es">🇪🇸&nbsp; Español</button>
     </div>
+    <div class="langpick-s">You can change it anytime at the top of the screen.<br>
+      Puedes cambiarlo en cualquier momento en la parte superior.</div>
   </div>
 </div>
 
@@ -820,10 +866,6 @@ body{display:flex;flex-direction:column;}
     <div class="qa-stage">
       <div class="qa-in">
         <h3>📝 <span id="tQaHead">Send a question (anonymous)</span></h3>
-        <div class="qa-lang-row" style="display:flex;gap:6px;margin-bottom:8px;">
-          <button class="qa-lang active" data-lang="en">🇬🇧 English</button>
-          <button class="qa-lang" data-lang="es">🇪🇸 Español</button>
-        </div>
         <textarea id="qaText" class="qa-ta"
           placeholder="Type your question, or tap the mic to speak…"
           maxlength="500"></textarea>
@@ -930,7 +972,10 @@ if(db){
    영어를 모르는 교육생이 무엇을 눌러야 할지 몰라서, 상단에서 언어를
    고르면 버튼·안내·설문·Q&A 문구가 전부 그 언어로 바뀐다. */
 let UILANG = 'en';
-try{ UILANG = localStorage.getItem('kac_uilang') || 'en'; }catch(_){}
+// 저장된 값이 있었는지 따로 기억한다 — applyUILang 이 저장해 버리기 때문에
+// 이걸로 첫 방문 여부를 판단해야 한다
+let UILANG_SAVED = null;
+try{ UILANG_SAVED = localStorage.getItem('kac_uilang'); UILANG = UILANG_SAVED || 'en'; }catch(_){}
 const T={
  en:{
   openPdf:'Open PDF', materials:'Materials', survey:'Survey', qa:'Q&A',
@@ -963,6 +1008,7 @@ const T={
   qaPh:'Type your question, or tap the mic to speak…',
   speak:'Speak', send:'Send', sending:'Sending…',
   sent:'✓ Question sent to lecturer', sendFail:'Send failed. Try again.',
+  qaDone:'✓ Resolved', qaWait:'⏳ Waiting',
   connErr:'Connection error.', micDenied:'Please allow microphone access.',
   syncOnMsg:"🔗 Sync ON — following lecturer's page", syncOffMsg:'Sync OFF — navigate freely',
   syncAny:'You can enable Sync anytime from the top bar.',
@@ -1005,6 +1051,7 @@ const T={
   qaPh:'Escribe tu pregunta, o pulsa el micrófono para hablar…',
   speak:'Hablar', send:'Enviar', sending:'Enviando…',
   sent:'✓ Pregunta enviada al instructor', sendFail:'Error al enviar. Inténtalo de nuevo.',
+  qaDone:'✓ Respondida', qaWait:'⏳ En espera',
   connErr:'Error de conexión.', micDenied:'Permite el acceso al micrófono.',
   syncOnMsg:'🔗 Sincronización activada — siguiendo al instructor',
   syncOffMsg:'Sincronización desactivada — navega libremente',
@@ -1020,6 +1067,15 @@ const T={
 };
 function t(k){ const d=T[UILANG]||T.en; return (d[k]!==undefined)?d[k]:(T.en[k]!==undefined?T.en[k]:k); }
 function _txt(id,v){ const e=$(id); if(e) e.textContent=v; }
+
+/* 상단 버튼은 해당 화면이 열려 있는 동안만 금색이 된다 */
+function syncTopButtons(){
+  const on=(vid)=>{ const v=$(vid); return !!(v && v.classList.contains('on')); };
+  const set=(bid,st)=>{ const b=$(bid); if(b) b.classList.toggle('open-now',st); };
+  set('btnMaterials', on('viewMat'));
+  set('btnQuiz',      on('viewQuiz'));
+  set('btnQA',        on('viewQA'));
+}
 function _htm(id,v){ const e=$(id); if(e) e.innerHTML=v; }
 
 function applyUILang(){
@@ -1057,6 +1113,7 @@ function applyUILang(){
   try{ qzLang = UILANG; }catch(_){}
 
   try{ updateSubHint(); }catch(_){}
+  try{ syncTopButtons(); }catch(_){}
   if(typeof renderMaterials==='function' && $('viewMat') && $('viewMat').classList.contains('on')) renderMaterials();
   if(typeof renderQz==='function' && typeof qzIsOpen==='function' && qzIsOpen()) renderQz();
   if(typeof renderQs==='function'){ try{ renderQs(); }catch(_){} }
@@ -1271,10 +1328,10 @@ function hintBack(btn){
   setTimeout(()=>btn.classList.remove('hint'),3600);
 }
 
-function openQA(){$('viewQA').classList.add('on');$('btnQA').classList.add('on');
+function openQA(){$('viewQA').classList.add('on');syncTopButtons();
   hintBack($('btnQAClose'));
   setTimeout(()=>$('qaText').focus(),80);}
-function closeQA(){$('viewQA').classList.remove('on');$('btnQA').classList.remove('on');}
+function closeQA(){$('viewQA').classList.remove('on');syncTopButtons();}
 
 $('btnQA').onclick=()=>$('viewQA').classList.contains('on')?closeQA():openQA();
 $('btnQAClose').onclick=closeQA;
@@ -1357,7 +1414,7 @@ function renderMaterials(){
     c.appendChild(row);
   });
 }
-function closeMat(){ $('viewMat').classList.remove('on'); }
+function closeMat(){ $('viewMat').classList.remove('on'); syncTopButtons(); }
 
 /* ══ 사전평가 설문 (Pre-course Check) ══════════════════════════════
    강사 플랫폼이 matCfg/<SESSION>/quiz 에 문항을 만들고,
@@ -1370,7 +1427,7 @@ function qzSorted(){
   return Object.entries(qzItems).sort((a,b)=>(a[1].ord||0)-(b[1].ord||0));
 }
 function qzIsOpen(){ return $('viewQuiz') && $('viewQuiz').classList.contains('on'); }
-function closeQz(){ if($('viewQuiz')) $('viewQuiz').classList.remove('on'); }
+function closeQz(){ if($('viewQuiz')) $('viewQuiz').classList.remove('on'); syncTopButtons(); }
 
 /* 고른 언어가 비어 있으면 다른 언어로 폴백한다.
    강사가 스페인어만 넣었거나 영어만 넣었어도 그대로 보인다.
@@ -1546,7 +1603,7 @@ if(db){
 }
 
 $('btnQuiz') && ($('btnQuiz').onclick=function(){
-  renderQz(); $('viewQuiz').classList.add('on'); hintBack($('btnQzClose'));
+  renderQz(); $('viewQuiz').classList.add('on'); syncTopButtons(); hintBack($('btnQzClose'));
 });
 $('btnQzClose')  && ($('btnQzClose').onclick=closeQz);
 $('btnQzClose2') && ($('btnQzClose2').onclick=closeQz);
@@ -1554,8 +1611,24 @@ $('qzSubmit')    && ($('qzSubmit').onclick=qzSubmitAnswers);
 document.querySelectorAll('.uilang-b').forEach(function(b){
   b.onclick=function(){ UILANG=b.dataset.ui; applyUILang(); };
 });
+
+/* 첫 방문이면 언어부터 고르게 한다 — 영어를 모르는 교육생이
+   어느 버튼을 눌러야 할지 헤매지 않도록. 한 번 고르면 다시 안 뜬다. */
+function initLangPick(){
+  const box=$('langPick');
+  if(!box) return;
+  if(UILANG_SAVED){ box.classList.remove('on'); return; }
+  box.classList.add('on');
+  box.querySelectorAll('.langpick-b').forEach(function(b){
+    b.onclick=function(){
+      UILANG=b.dataset.ui;
+      applyUILang();
+      box.classList.remove('on');
+    };
+  });
+}
 $('btnMaterials') && ($('btnMaterials').onclick=()=>{
-  renderMaterials(); $('viewMat').classList.add('on'); hintBack($('btnMatClose'));
+  renderMaterials(); $('viewMat').classList.add('on'); syncTopButtons(); hintBack($('btnMatClose'));
 });
 $('btnMatClose')  && ($('btnMatClose').onclick=closeMat);
 $('btnMatClose2') && ($('btnMatClose2').onclick=closeMat);
@@ -1613,7 +1686,7 @@ function renderQs(){
   const c=$('myQs'),list=Object.values(qCache).sort((a,b)=>b.timestamp-a.timestamp);
   const badge=$('qaBadge');
   if(!list.length){
-    c.innerHTML='<div class="qa-empty">No questions yet.</div>';
+    c.innerHTML='<div class="qa-empty">'+t('qaNone')+'</div>';
     badge.classList.remove('show');
     return;
   }
@@ -1626,7 +1699,7 @@ function renderQs(){
     d.className='qi'+(res?' res':'');
     const hh=q.timestamp?new Date(q.timestamp):new Date();
     const t=`${String(hh.getHours()).padStart(2,'0')}:${String(hh.getMinutes()).padStart(2,'0')}`;
-    d.innerHTML=`<span class="qi-st ${res?'r':'p'}">${res?'✓ Resolved':'⏳ Waiting'}</span>
+    d.innerHTML=`<span class="qi-st ${res?'r':'p'}">${res?t('qaDone'):t('qaWait')}</span>
       <div class="qi-txt">${esc(q.text)}</div><div class="qi-t">${t}</div>`;
     c.appendChild(d);
   });
@@ -1821,6 +1894,8 @@ document.addEventListener('click',()=>{if(!wl)reqWake();},{once:true});
 
 // ── 화면 언어 최초 적용 — 모든 변수 선언이 끝난 뒤여야 한다 ────────
 applyUILang();
+initLangPick();
+syncTopButtons();
 </script>
 </body>
 </html>
