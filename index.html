@@ -516,6 +516,23 @@ body{display:flex;flex-direction:column;}
   padding:10px 12px;margin-bottom:7px;
 }
 .qi.res{border-left-color:var(--green);opacity:.65;}
+/* 내 질문 수정 · 삭제 */
+.qi-acts{display:flex;gap:6px;margin-top:8px;}
+.qi-act{
+  background:var(--panel2);border:1px solid var(--line);color:var(--dim);
+  border-radius:6px;padding:5px 11px;font-size:11px;font-weight:600;
+  font-family:inherit;cursor:pointer;transition:border-color .12s,color .12s;
+}
+.qi-act:hover{border-color:var(--gold);color:var(--text);}
+.qi-act.del:hover{border-color:var(--red);color:var(--red);}
+.qi-act.save{background:var(--gold);border-color:var(--gold);color:#1a1a1a;font-weight:700;}
+.qi-act.save:hover{background:#e0b85a;color:#1a1a1a;}
+.qi-ed{
+  width:100%;background:var(--bg);border:1px solid var(--gold);color:var(--text);
+  border-radius:6px;padding:9px 11px;font-family:inherit;font-size:14px;
+  line-height:1.5;resize:vertical;min-height:64px;outline:none;
+}
+.qi-edited{font-size:10px;color:var(--dim);font-style:italic;margin-left:6px;}
 .qi-st{
   display:inline-block;padding:2px 7px;border-radius:9px;
   font-size:9px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;margin-bottom:5px;
@@ -1009,6 +1026,10 @@ const T={
   speak:'Speak', send:'Send', sending:'Sending…',
   sent:'✓ Question sent to lecturer', sendFail:'Send failed. Try again.',
   qaDone:'✓ Resolved', qaWait:'⏳ Waiting',
+  qaEdit:'✎ Edit', qaDel:'🗑 Delete', qaSave:'Save', qaCancel:'Cancel',
+  qaDelAsk:'Delete this question?', qaEdited:'(edited)',
+  qaEmptyText:'The question cannot be empty.',
+  qaUpdated:'✓ Question updated', qaDeleted:'Question deleted',
   connErr:'Connection error.', micDenied:'Please allow microphone access.',
   syncOnMsg:"🔗 Sync ON — following lecturer's page", syncOffMsg:'Sync OFF — navigate freely',
   syncAny:'You can enable Sync anytime from the top bar.',
@@ -1052,6 +1073,10 @@ const T={
   speak:'Hablar', send:'Enviar', sending:'Enviando…',
   sent:'✓ Pregunta enviada al instructor', sendFail:'Error al enviar. Inténtalo de nuevo.',
   qaDone:'✓ Respondida', qaWait:'⏳ En espera',
+  qaEdit:'✎ Editar', qaDel:'🗑 Eliminar', qaSave:'Guardar', qaCancel:'Cancelar',
+  qaDelAsk:'¿Eliminar esta pregunta?', qaEdited:'(editada)',
+  qaEmptyText:'La pregunta no puede estar vacía.',
+  qaUpdated:'✓ Pregunta actualizada', qaDeleted:'Pregunta eliminada',
   connErr:'Error de conexión.', micDenied:'Permite el acceso al micrófono.',
   syncOnMsg:'🔗 Sincronización activada — siguiendo al instructor',
   syncOffMsg:'Sincronización desactivada — navega libremente',
@@ -1682,8 +1707,36 @@ if(db)db.ref('questions/'+SESSION).on('value',snap=>{
   renderQs();
 });
 
+/* 수정 중인 질문 키 — 재렌더돼도 편집 상태를 유지한다 */
+let qEditKey=null;
+
+/* 본문을 고치면 강사 화면의 한국어 번역이 과거 문장으로 남으므로
+   koTrans 계열을 지워 다시 번역되게 하고, 상태도 대기중으로 되돌린다. */
+function qSaveEdit(key, val){
+  const txt=(val||'').trim();
+  if(!txt){ toast(t('qaEmptyText'),3000); return; }
+  if(!db){ toast(t('connErr'),3000); return; }
+  db.ref('questions/'+SESSION+'/'+key).update({
+    text: txt.slice(0,500),
+    status: 'pending',
+    editedAt: Date.now(),
+    koTrans: null, koDraft: null, translatedAt: null, _translating: null
+  }).then(function(){
+    qEditKey=null; renderQs(); toast(t('qaUpdated'),2200);
+  }).catch(function(e){ toast(t('sendFail'),3000); });
+}
+
+function qDelete(key){
+  if(!db){ toast(t('connErr'),3000); return; }
+  if(!confirm(t('qaDelAsk'))) return;
+  db.ref('questions/'+SESSION+'/'+key).remove()
+    .then(function(){ if(qEditKey===key) qEditKey=null; toast(t('qaDeleted'),2200); })
+    .catch(function(e){ toast(t('sendFail'),3000); });
+}
+
 function renderQs(){
-  const c=$('myQs'),list=Object.values(qCache).sort((a,b)=>b.timestamp-a.timestamp);
+  const c=$('myQs');
+  const list=Object.entries(qCache).sort((a,b)=>b[1].timestamp-a[1].timestamp);
   const badge=$('qaBadge');
   if(!list.length){
     c.innerHTML='<div class="qa-empty">'+t('qaNone')+'</div>';
@@ -1692,15 +1745,46 @@ function renderQs(){
   }
   c.innerHTML='';
   let pend=0;
-  list.forEach(q=>{
+  list.forEach(function(e){
+    const key=e[0], q=e[1];
     const res=q.status==='resolved';
     if(!res) pend++;
     const d=document.createElement('div');
     d.className='qi'+(res?' res':'');
     const hh=q.timestamp?new Date(q.timestamp):new Date();
     const hhmm=`${String(hh.getHours()).padStart(2,'0')}:${String(hh.getMinutes()).padStart(2,'0')}`;
-    d.innerHTML=`<span class="qi-st ${res?'r':'p'}">${res?t('qaDone'):t('qaWait')}</span>
-      <div class="qi-txt">${esc(q.text)}</div><div class="qi-t">${hhmm}</div>`;
+    const editedTag = q.editedAt ? `<span class="qi-edited">${t('qaEdited')}</span>` : '';
+
+    if(qEditKey===key){
+      // ── 수정 모드 ──
+      d.innerHTML=`<span class="qi-st ${res?'r':'p'}">${res?t('qaDone'):t('qaWait')}</span>
+        <textarea class="qi-ed" maxlength="500"></textarea>
+        <div class="qi-acts">
+          <button class="qi-act save">${t('qaSave')}</button>
+          <button class="qi-act">${t('qaCancel')}</button>
+        </div>`;
+      const ta=d.querySelector('.qi-ed');
+      ta.value=q.text||'';
+      const bs=d.querySelectorAll('.qi-act');
+      bs[0].onclick=function(){ qSaveEdit(key, ta.value); };
+      bs[1].onclick=function(){ qEditKey=null; renderQs(); };
+      ta.onkeydown=function(ev){
+        if(ev.key==='Escape'){ ev.preventDefault(); qEditKey=null; renderQs(); }
+        if(ev.key==='Enter' && (ev.ctrlKey||ev.metaKey)){ ev.preventDefault(); qSaveEdit(key, ta.value); }
+      };
+      setTimeout(function(){ ta.focus(); ta.selectionStart=ta.value.length; },0);
+    } else {
+      d.innerHTML=`<span class="qi-st ${res?'r':'p'}">${res?t('qaDone'):t('qaWait')}</span>
+        <div class="qi-txt">${esc(q.text)}</div>
+        <div class="qi-t">${hhmm}${editedTag}</div>
+        <div class="qi-acts">
+          <button class="qi-act">${t('qaEdit')}</button>
+          <button class="qi-act del">${t('qaDel')}</button>
+        </div>`;
+      const bs=d.querySelectorAll('.qi-act');
+      bs[0].onclick=function(){ qEditKey=key; renderQs(); };
+      bs[1].onclick=function(){ qDelete(key); };
+    }
     c.appendChild(d);
   });
   // Badge: show pending count; turn green and auto-clear when all resolved
