@@ -2028,13 +2028,26 @@ async function openRemotePdf(url,title,isEs){
   if(!url) return;
   if(!window.pdfjsLib){ toast(t('pdfLib'),4000); return; }
   closeMat();
+
+  /* 앞서 받던 교재가 있으면 먼저 멈춘다.
+     안 그랬면 둘이 같은 화면에 진행률을 써대서 숫자가 오르락내리락한다. */
+  if(_plTask){
+    const prev = _plTask;
+    _plTask = null;
+    try{ if(prev.destroy) prev.destroy(); }catch(e){}
+  }
+
   plShow(title);
+  let task = null;
   try{
-    const task = pdfjsLib.getDocument({ url:url });
+    task = pdfjsLib.getDocument({ url:url });
     _plTask = task;
-    task.onProgress = function(p){ plProgress(p && p.loaded || 0, p && p.total || 0); };
+    task.onProgress = function(p){
+      if(_plTask !== task) return;            /* 지나간 작업의 보고는 무시 */
+      plProgress(p && p.loaded || 0, p && p.total || 0);
+    };
     const doc = await task.promise;
-    if(_plTask !== task) return;              /* 중간에 취소했으면 무시 */
+    if(_plTask !== task) return;              /* 중간에 다른 교재를 눌렀으면 무시 */
     $('plPct').textContent = '100%';
     $('plBar').style.width = '100%';
     $('plBarWrap').classList.remove('wait');
@@ -2049,8 +2062,11 @@ async function openRemotePdf(url,title,isEs){
           +(isEs?' — page sync disabled':''),3500);
     if(!isEs && !syncOn) showBanner();
   }catch(e){
+    /* 내가 멈췔세운 지나간 작업의 오류라면
+       지금 떠 있는 새 교재 화면을 건드리면 안 된다. */
+    if(task && _plTask !== task) return;
     plDone();
-    if(e && e.name === 'AbortException') return;   /* 사용자가 취소한 경우 */
+    if(e && (e.name === 'AbortException' || e.name === 'RenderingCancelledException')) return;
     toast(t('openFail'),6000);
     window.open(url,'_blank','noopener');
   }
